@@ -4,11 +4,16 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "node": "24.21.0"
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "env": {
         "APP_VARIANT": "preview",
@@ -17,6 +22,7 @@
       }
     },
     "production": {
+      "extends": "base",
       "autoIncrement": true
     }
   },
