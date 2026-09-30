@@ -80,7 +80,7 @@ supabase/
 4. **Profile** tab → connect your wallet. **Discover** tab → pick a creator → **Send a tip**.
 5. To receive tips: **Profile** → *Receive tips* → choose a handle → **Publish my page** → sign.
 
-> The app interface is currently in French.
+> The app follows the phone's language (English or French); switch it anytime with the **FR / EN** toggle in the Profile tab.
 
 ## Development
 
@@ -127,6 +127,7 @@ To enable boost verification, set the `TSKR_MINT` and `PLATFORM_WALLET` secrets 
 | Creator page publishing by signature | ✅ tested with Phantom |
 | On-chain tip verification (`record-tip`) | ✅ tested server-side |
 | Support wall, creator space, loyalty tiers | ✅ |
+| English / French interface, remembered choice | ✅ |
 | `tipstreak://` deep links | ✅ implemented, to validate on the preview build |
 | End-to-end USDC tip | ⏳ waiting for devnet SOL (faucets rate-limited) |
 | SKR boost | ⏳ waiting for the TSKR test token |
@@ -136,7 +137,7 @@ To enable boost verification, set the `TSKR_MINT` and `PLATFORM_WALLET` secrets 
 - **Pay with any token**: Jupiter swap (mainnet) straight into the creator's USDC account,
   with a platform fee as a revenue stream.
 - **Mainnet launch**: real SKR token (`SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3`) and mainnet USDC.
-- English / French app interface, profile pictures, creator-defined perks for each tier, `https://` links (App Links).
+- Profile pictures, creator-defined perks for each tier, `https://` links (App Links).
 
 ## License
 

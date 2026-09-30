@@ -81,6 +81,8 @@ supabase/
 4. Onglet **Profil** → connecter le wallet. Onglet **Découvrir** → choisir un créateur → **Envoyer un tip**.
 5. Pour recevoir : **Profil** → *Recevoir des tips* → choisir un handle → **Publier ma page** → signer.
 
+> L'app suit la langue du téléphone (français ou anglais) ; le bouton **FR / EN** de l'onglet Profil permet de changer à tout moment.
+
 ## Développement
 
 Prérequis : Node.js 24, un compte [Expo](https://expo.dev), un projet [Supabase](https://supabase.com), un téléphone Android.
@@ -126,6 +128,7 @@ Pour activer la vérification des boosts, définir les secrets `TSKR_MINT` et `P
 | Publication de page créateur par signature | ✅ testé avec Phantom |
 | Vérification on-chain des tips (`record-tip`) | ✅ testé côté serveur |
 | Mur des soutiens, espace créateur, paliers de fidélité | ✅ |
+| Interface français / anglais, choix mémorisé | ✅ |
 | Liens profonds `tipstreak://` | ✅ codé, à valider sur la build preview |
 | Tip USDC de bout en bout | ⏳ en attente de SOL devnet (faucets saturés) |
 | Boost SKR | ⏳ en attente du jeton de test TSKR |
