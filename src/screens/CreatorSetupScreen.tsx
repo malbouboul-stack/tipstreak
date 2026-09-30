@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Share, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -17,7 +17,7 @@ export default function CreatorSetupScreen() {
   const navigation = useNavigation();
   const { publicKey, connecting, error, solBalance, usdcBalance, refreshingBalances, connect, disconnect, refreshBalances } = useWallet();
   const { myCreator, publishCreator, refresh } = useData();
-  const { tips: receivedTips, loading: tipsLoading, reload: reloadTips } = useCreatorTips(myCreator?.id);
+  const { tips: receivedTips, loading: tipsLoading, reload: reloadTips, fetchedAt } = useCreatorTips(myCreator?.id);
   const { t, translateError, language, setLanguage } = useLanguage();
   const [isCreator, setIsCreator] = useState(false);
   const [handle, setHandle] = useState('');
@@ -38,15 +38,16 @@ export default function CreatorSetupScreen() {
     setRefreshing(false);
   };
 
-  // Ce wallet a déjà une page : on pré-remplit le formulaire (replié) pour pouvoir la modifier
-  useEffect(() => {
-    if (!myCreator) return;
-    setIsCreator(false);
-    setHandle(myCreator.handle);
-    setDisplayName(myCreator.name);
-    setCategory(myCreator.category);
-    setBio(myCreator.bio);
-  }, [myCreator]);
+  // Ouvre / replie le formulaire. Si ce wallet a déjà une page, on le pré-remplit pour la modifier.
+  const toggleForm = () => {
+    if (!isCreator && myCreator) {
+      setHandle(myCreator.handle);
+      setDisplayName(myCreator.name);
+      setCategory(myCreator.category);
+      setBio(myCreator.bio);
+    }
+    setIsCreator(!isCreator);
+  };
 
   const handleValid = HANDLE.test(handle);
 
@@ -54,6 +55,7 @@ export default function CreatorSetupScreen() {
     setPublishing(true);
     try {
       const creator = await publishCreator({ handle, name: displayName, category, bio });
+      setIsCreator(false); // la page est en ligne : on replie le formulaire, le tableau de bord prend le relais
       Alert.alert(
         myCreator ? t('profile.updatedTitle') : t('profile.publishedTitle'),
         t('profile.publishedText', { link: getCreatorLink(creator) })
@@ -178,11 +180,11 @@ export default function CreatorSetupScreen() {
             </View>
 
             <Text style={styles.sectionLabel}>{t('profile.latestTips')}</Text>
-            <SupportWall tips={receivedTips} loading={tipsLoading} emptyText={t('profile.noTipsYet')} />
+            <SupportWall tips={receivedTips} loading={tipsLoading} now={fetchedAt} emptyText={t('profile.noTipsYet')} />
           </View>
         )}
 
-        <TouchableOpacity style={styles.toggleRow} onPress={() => setIsCreator(!isCreator)} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.toggleRow} onPress={toggleForm} activeOpacity={0.85}>
           <View>
             <Text style={styles.toggleLabel}>{myCreator ? t('profile.editPage') : t('profile.receiveTips')}</Text>
             <Text style={styles.toggleSub}>{myCreator ? t('profile.editPageSub') : t('profile.receiveTipsSub')}</Text>

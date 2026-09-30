@@ -12,6 +12,10 @@ import type { RootStackParamList } from '../../App';
 
 const QUICK_AMOUNTS = [1, 5, 10, 25];
 const BOOST_COST_SKR = 5;
+// Frais Solana : ~0,000005 SOL par transaction. Le premier tip vers un créateur ouvre en plus
+// son compte USDC (~0,00204 SOL de dépôt), payé par le fan.
+const MIN_FEE_SOL = 0.00001;
+const FIRST_TIP_SOL = 0.003;
 
 export default function TipScreen() {
   const navigation = useNavigation();
@@ -20,7 +24,7 @@ export default function TipScreen() {
   const { getCreator, getSupportRelation, recordTip } = useData();
   const creator = getCreator(creatorId);
   const relation = getSupportRelation(creatorId);
-  const { publicKey, connecting, connect, sendTip, sendBoost, refreshBalances } = useWallet();
+  const { publicKey, connecting, connect, sendTip, sendBoost, refreshBalances, usdcBalance, solBalance } = useWallet();
   const { t, translateError } = useLanguage();
 
   const [amount, setAmount] = useState(5);
@@ -52,7 +56,21 @@ export default function TipScreen() {
     );
   }
 
-  const finalAmount = customAmount ? parseFloat(customAmount.replace(',', '.')) || 0 : amount;
+  // Montant valide : strictement positif, 6 décimales max (précision de l'USDC)
+  const parsedAmount = customAmount ? parseFloat(customAmount.replace(',', '.')) : amount;
+  const finalAmount = Number.isFinite(parsedAmount) && parsedAmount > 0 ? Math.round(parsedAmount * 1e6) / 1e6 : 0;
+
+  // Vérifications avant envoi : sinon le wallet renvoie une erreur peu compréhensible
+  const notEnoughUsdc = usdcBalance !== null && finalAmount > usdcBalance;
+  const noSol = solBalance !== null && solBalance < MIN_FEE_SOL;
+  const lowSol = !noSol && solBalance !== null && solBalance < FIRST_TIP_SOL;
+  const balanceWarning = notEnoughUsdc
+    ? t('tip.insufficientUsdc', { balance: usdcBalance.toFixed(2) })
+    : noSol
+      ? t('tip.noSol', { needed: FIRST_TIP_SOL })
+      : lowSol
+        ? t('tip.lowSol', { balance: solBalance.toFixed(4), needed: FIRST_TIP_SOL })
+        : null;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -96,7 +114,7 @@ export default function TipScreen() {
             <TextInput
               style={styles.amountInput}
               value={customAmount || String(amount)}
-              onChangeText={setCustomAmount}
+              onChangeText={(text) => setCustomAmount(text.replace(/[^0-9.,]/g, ''))}
               keyboardType="decimal-pad"
             />
             <Text style={styles.currency}>USDC</Text>
@@ -126,10 +144,14 @@ export default function TipScreen() {
             />
           </View>
 
+          {balanceWarning && (
+            <Text style={[styles.warning, (notEnoughUsdc || noSol) && styles.warningBlocking]}>{balanceWarning}</Text>
+          )}
+
           <GradientButton
-            label={sending ? t('tip.sending') : t('tip.confirm', { amount: finalAmount || 0 })}
+            label={sending ? t('tip.sending') : t('tip.confirm', { amount: finalAmount })}
             style={{ marginTop: 'auto' }}
-            disabled={!finalAmount || sending}
+            disabled={!finalAmount || sending || notEnoughUsdc || noSol}
             onPress={async () => {
               setSending(true);
               try {
@@ -200,6 +222,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderSoft, alignItems: 'center', justifyContent: 'center',
   },
   title: { color: colors.text, fontFamily: fonts.display, fontSize: 18 },
+  warning: { color: colors.gold, fontFamily: fonts.body, fontSize: 12, textAlign: 'center', marginBottom: 10 },
+  warningBlocking: { color: '#FF6B6B' },
   creatorRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.borderSoft, borderRadius: 16, padding: 12, marginBottom: 18,

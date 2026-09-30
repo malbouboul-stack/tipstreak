@@ -14,6 +14,8 @@ type KeyValueStore = { getItemSync(key: string): string | null; setItemSync(key:
 // (on perd alors seulement la mémorisation du choix de langue).
 function loadStore(): KeyValueStore | null {
   try {
+    // require() et non import : un import qui échoue ferait planter tout le bundle
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('expo-sqlite/kv-store').default as KeyValueStore;
   } catch {
     return null;
@@ -23,6 +25,7 @@ function loadStore(): KeyValueStore | null {
 function deviceLanguage(): Language {
   let code: string | null | undefined;
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     code = require('expo-localization').getLocales()[0]?.languageCode;
   } catch {
     code = Intl.DateTimeFormat().resolvedOptions().locale;

@@ -78,6 +78,9 @@ export const fr = {
   'tip.successBoost': ' Boost activé ⚡',
   'tip.failedTitle': "Échec de l'envoi",
   'tip.failedDefault': 'La transaction a échoué. Vérifie ton solde USDC.',
+  'tip.insufficientUsdc': 'Solde insuffisant : tu as {balance} USDC.',
+  'tip.noSol': "Tu n'as pas de SOL pour payer les frais de réseau. Il en faut environ {needed} SOL.",
+  'tip.lowSol': 'Peu de SOL ({balance}) : il en faut environ {needed} si le créateur reçoit son premier tip.',
 
   // Mes soutiens
   'support.title': 'Mes soutiens',
@@ -144,6 +147,7 @@ export const fr = {
   'error.txFailed': 'La transaction a échoué on-chain',
   'error.txNotConfirmed': 'Transaction envoyée mais pas encore confirmée par le réseau',
   'error.txNotFound': 'Transaction introuvable sur devnet (pas encore confirmée ?)',
+  'error.rpcBusy': 'RPC Solana saturé, réessaie dans un instant',
   'error.wrongRecipient': 'La transaction ne verse rien au bon destinataire',
   'error.signerUnknown': "Impossible d'identifier le signataire de la transaction",
   'error.blockTime': 'Heure du bloc indisponible, réessaie dans quelques secondes',
@@ -233,6 +237,9 @@ export const en: Record<TranslationKey, string> = {
   'tip.successBoost': ' Boost activated ⚡',
   'tip.failedTitle': 'Sending failed',
   'tip.failedDefault': 'The transaction failed. Check your USDC balance.',
+  'tip.insufficientUsdc': 'Insufficient balance: you have {balance} USDC.',
+  'tip.noSol': "You don't have SOL to pay network fees. You need about {needed} SOL.",
+  'tip.lowSol': 'Low SOL ({balance}): about {needed} is needed if this is the creator\'s first tip.',
 
   'support.title': 'My support',
   'support.all': 'All ({count})',
@@ -295,6 +302,7 @@ export const en: Record<TranslationKey, string> = {
   'error.txFailed': 'The transaction failed on-chain',
   'error.txNotConfirmed': 'Transaction sent but not yet confirmed by the network',
   'error.txNotFound': 'Transaction not found on devnet (not confirmed yet?)',
+  'error.rpcBusy': 'Solana RPC is busy, please try again in a moment',
   'error.wrongRecipient': 'The transaction does not pay the right recipient',
   'error.signerUnknown': 'Could not identify who signed the transaction',
   'error.blockTime': 'Block time unavailable, try again in a few seconds',

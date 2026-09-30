@@ -48,8 +48,10 @@ const BASE58_SIGNATURE = /^[1-9A-HJ-NP-Za-km-z]{64,90}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function fetchTransaction(signature: string): Promise<ParsedTransaction> {
-  // Juste après l'envoi, le RPC peut ne pas encore voir la transaction : on réessaie un peu
-  for (let attempt = 0; attempt < 5; attempt++) {
+  // On réessaie un peu : juste après l'envoi, le RPC peut ne pas encore voir la transaction,
+  // et le RPC public de devnet limite le nombre d'appels ("Too many requests", code 429).
+  let rateLimited = false;
+  for (let attempt = 0; attempt < 6; attempt++) {
     const res = await fetch(RPC_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -60,11 +62,13 @@ async function fetchTransaction(signature: string): Promise<ParsedTransaction> {
         params: [signature, { encoding: 'jsonParsed', commitment: 'confirmed', maxSupportedTransactionVersion: 0 }],
       }),
     });
-    const json = await res.json();
-    if (json.error) throw new HttpError(502, `RPC Solana : ${json.error.message}`);
+    const json = res.status === 429 ? { error: { code: 429, message: 'Too many requests' } } : await res.json();
+    rateLimited = json.error?.code === 429;
+    if (json.error && !rateLimited) throw new HttpError(502, `RPC Solana : ${json.error.message}`);
     if (json.result) return json.result;
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, rateLimited ? 2500 : 1500));
   }
+  if (rateLimited) throw new HttpError(503, 'RPC Solana saturé, réessaie dans un instant');
   throw new HttpError(404, 'Transaction introuvable sur devnet (pas encore confirmée ?)');
 }
 

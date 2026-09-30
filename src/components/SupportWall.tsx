@@ -11,15 +11,16 @@ const PIN_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 type Props = {
   tips: CreatorTip[];
   loading: boolean;
+  now: number; // heure de référence (dernier chargement) : un rendu doit rester pur, sans Date.now()
   currentWallet?: string | null; // pour afficher "Toi" sur ses propres tips
   emptyText: string;
 };
 
-export default function SupportWall({ tips, loading, currentWallet, emptyText }: Props) {
+export default function SupportWall({ tips, loading, now, currentWallet, emptyText }: Props) {
   const { t, locale } = useLanguage();
 
   const formatRelative = (date: Date): string => {
-    const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+    const minutes = Math.max(0, Math.floor((now - date.getTime()) / 60000));
     if (minutes < 1) return t('wall.justNow');
     if (minutes < 60) return t('wall.minutesAgo', { count: minutes });
     const hours = Math.floor(minutes / 60);
@@ -35,7 +36,7 @@ export default function SupportWall({ tips, loading, currentWallet, emptyText }:
     return <Text style={styles.empty}>{emptyText}</Text>;
   }
 
-  const pinCutoff = Date.now() - PIN_DURATION_MS;
+  const pinCutoff = now - PIN_DURATION_MS;
   const pinned = tips.filter((t) => t.boosted && t.createdAt.getTime() >= pinCutoff);
   const others = tips.filter((t) => !pinned.includes(t));
 

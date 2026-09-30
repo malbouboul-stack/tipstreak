@@ -106,6 +106,35 @@ function toCreator(row: CreatorRow): Creator {
   };
 }
 
+type LoadResult = { ok: true; creators: Creator[]; tipRows: TipRow[] } | { ok: false };
+
+// Créateurs (avec stats) + tips envoyés par le wallet connecté
+async function loadData(publicKey: string | null): Promise<LoadResult> {
+  try {
+    const creatorsQuery = supabase.from('creator_stats').select('*').order('supporters', { ascending: false });
+    const tipsQuery = publicKey
+      ? supabase
+          .from('tips')
+          .select('signature, creator_id, amount, boosted, message, created_at')
+          .eq('fan_wallet', publicKey)
+          .order('created_at', { ascending: false })
+      : null;
+
+    const [creatorsRes, tipsRes] = await Promise.all([creatorsQuery, tipsQuery]);
+    if (creatorsRes.error) throw creatorsRes.error;
+    if (tipsRes?.error) throw tipsRes.error;
+
+    return {
+      ok: true,
+      creators: (creatorsRes.data as CreatorRow[]).map(toCreator),
+      tipRows: (tipsRes?.data as TipRow[] | undefined) ?? [],
+    };
+  } catch (e) {
+    console.error('Supabase fetch error', e);
+    return { ok: false };
+  }
+}
+
 export function DataProvider({ children }: { children: ReactNode }) {
   const { publicKey, signMessage } = useWallet();
   const [creators, setCreators] = useState<Creator[]>([]);
@@ -113,36 +142,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    setError(null);
-    try {
-      const creatorsQuery = supabase.from('creator_stats').select('*').order('supporters', { ascending: false });
-      const tipsQuery = publicKey
-        ? supabase
-            .from('tips')
-            .select('signature, creator_id, amount, boosted, message, created_at')
-            .eq('fan_wallet', publicKey)
-            .order('created_at', { ascending: false })
-        : null;
-
-      const [creatorsRes, tipsRes] = await Promise.all([creatorsQuery, tipsQuery]);
-      if (creatorsRes.error) throw creatorsRes.error;
-      if (tipsRes?.error) throw tipsRes.error;
-
-      setCreators((creatorsRes.data as CreatorRow[]).map(toCreator));
-      setTipRows((tipsRes?.data as TipRow[] | undefined) ?? []);
-    } catch (e: any) {
-      console.error('Supabase fetch error', e);
+  const applyResult = useCallback((result: LoadResult) => {
+    if (result.ok) {
+      setCreators(result.creators);
+      setTipRows(result.tipRows);
+      setError(null);
+    } else {
       setError('discover.loadError');
-    } finally {
-      setLoading(false);
     }
-  }, [publicKey]);
+    setLoading(false);
+  }, []);
 
-  // Recharge au démarrage et à chaque connexion / déconnexion du wallet
+  const refresh = useCallback(async () => {
+    applyResult(await loadData(publicKey));
+  }, [publicKey, applyResult]);
+
+  // Recharge au démarrage et à chaque connexion / déconnexion du wallet.
+  // Une réponse arrivée après un changement de wallet est ignorée.
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    let cancelled = false;
+    loadData(publicKey).then((result) => {
+      if (!cancelled) applyResult(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [publicKey, applyResult]);
 
   const recordTip = useCallback<DataContextType['recordTip']>(
     async ({ signature, creatorId, boostSignature }) => {

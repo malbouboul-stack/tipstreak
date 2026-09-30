@@ -18,6 +18,8 @@ const MAX_TIPS = 50;
 export function useCreatorTips(creatorId: string | undefined) {
   const [tips, setTips] = useState<CreatorTip[]>([]);
   const [loading, setLoading] = useState(true);
+  // Heure du dernier chargement : sert de référence pour "il y a 5 min" et l'épinglage des boosts
+  const [fetchedAt, setFetchedAt] = useState(0);
 
   const reload = useCallback(async () => {
     if (!creatorId) return;
@@ -41,6 +43,7 @@ export function useCreatorTips(creatorId: string | undefined) {
           createdAt: new Date(t.created_at),
         }))
       );
+      setFetchedAt(Date.now());
     }
     setLoading(false);
   }, [creatorId]);
@@ -51,5 +54,5 @@ export function useCreatorTips(creatorId: string | undefined) {
     }, [reload])
   );
 
-  return { tips, loading, reload };
+  return { tips, loading, reload, fetchedAt };
 }

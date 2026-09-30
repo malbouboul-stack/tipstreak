@@ -22,7 +22,7 @@ export default function CreatorProfileScreen() {
   const creator = params.creatorId ? getCreator(params.creatorId) : getCreatorByHandle(params.handle ?? '');
   const relation = creator ? getSupportRelation(creator.id) : undefined;
   const { publicKey } = useWallet();
-  const { tips, loading: tipsLoading } = useCreatorTips(creator?.id);
+  const { tips, loading: tipsLoading, fetchedAt } = useCreatorTips(creator?.id);
 
   // Ouvert par un lien profond au démarrage : les créateurs sont encore en chargement
   if (!creator && loading) {
@@ -133,6 +133,7 @@ export default function CreatorProfileScreen() {
           <SupportWall
             tips={tips}
             loading={tipsLoading}
+            now={fetchedAt}
             currentWallet={publicKey}
             emptyText={t('creator.wallEmpty', { name: creator.name })}
           />
