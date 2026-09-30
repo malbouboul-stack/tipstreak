@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Share, ActivityIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { colors, fonts } from '../theme';
+import { colors, fonts, FAN_ACTIF_WEEKLY_TIPS, LEGEND_WEEKS } from '../theme';
 import { ChevronLeft, ShareIcon, CheckIcon, LockIcon } from '../components/Icons';
 import GradientButton from '../components/GradientButton';
 import { getCreatorLink, useData } from '../context/DataContext';
@@ -51,6 +51,32 @@ export default function CreatorProfileScreen() {
   }
 
   const link = getCreatorLink(creator);
+  const isOwnPage = creator.walletAddress === publicKey;
+
+  // Progression réelle du fan vers chaque badge (mêmes seuils que TierBadge)
+  const weeklyCount = relation?.weeklyCount ?? 0;
+  const consecutiveWeeks = relation?.consecutiveWeeks ?? 0;
+  const loyaltyTiers = [
+    {
+      title: '💜 Supporter',
+      unlocked: !!relation,
+      progress: relation ? 'Débloqué' : 'Envoie ton premier tip pour le débloquer',
+    },
+    {
+      title: '🔥 Fan actif',
+      unlocked: weeklyCount >= FAN_ACTIF_WEEKLY_TIPS,
+      progress:
+        weeklyCount >= FAN_ACTIF_WEEKLY_TIPS
+          ? 'Débloqué cette semaine'
+          : `${weeklyCount}/${FAN_ACTIF_WEEKLY_TIPS} tips cette semaine`,
+    },
+    {
+      title: '🏆 Légende',
+      unlocked: consecutiveWeeks >= LEGEND_WEEKS,
+      progress:
+        consecutiveWeeks >= LEGEND_WEEKS ? 'Débloqué' : `${consecutiveWeeks}/${LEGEND_WEEKS} semaines d'affilée avec au moins 1 tip`,
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -106,31 +132,30 @@ export default function CreatorProfileScreen() {
           />
         </View>
 
-        <Text style={styles.sectionLabel}>Perks</Text>
-        <View style={styles.perkRow}>
-          <View style={[styles.lock, { backgroundColor: colors.surface2 }]}>
-            <CheckIcon color={colors.green} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.perkTitle}>Accès Discord privé</Text>
-            <Text style={styles.perkSub}>Débloqué — tu es {relation ? 'Supporter' : 'pas encore abonné'}</Text>
-          </View>
-        </View>
-        <View style={styles.perkRow}>
-          <View style={styles.lock}>
-            <LockIcon />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.perkTitle}>Instru exclusive du mois</Text>
-            <Text style={styles.perkSub}>Débloqué à 3 tips/semaine</Text>
-          </View>
-        </View>
+        {isOwnPage ? (
+          <Text style={styles.ownPageNote}>C'est ta page : voilà ce que voient tes fans.</Text>
+        ) : (
+          <>
+            <Text style={styles.sectionLabel}>Tes paliers de fidélité</Text>
+            {loyaltyTiers.map((tier) => (
+              <View key={tier.title} style={styles.perkRow}>
+                <View style={[styles.lock, tier.unlocked && { backgroundColor: 'rgba(20,241,149,0.12)' }]}>
+                  {tier.unlocked ? <CheckIcon color={colors.green} /> : <LockIcon />}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.perkTitle}>{tier.title}</Text>
+                  <Text style={styles.perkSub}>{tier.progress}</Text>
+                </View>
+              </View>
+            ))}
 
-        <GradientButton
-          label="Envoyer un tip"
-          style={{ marginTop: 20 }}
-          onPress={() => navigation.navigate('Tip', { creatorId: creator.id })}
-        />
+            <GradientButton
+              label="Envoyer un tip"
+              style={{ marginTop: 20 }}
+              onPress={() => navigation.navigate('Tip', { creatorId: creator.id })}
+            />
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -169,5 +194,6 @@ const styles = StyleSheet.create({
   },
   lock: { width: 26, height: 26, borderRadius: 8, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   perkTitle: { color: colors.text, fontFamily: fonts.bodySemi, fontSize: 12 },
+  ownPageNote: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 12, textAlign: 'center', marginTop: 8 },
   perkSub: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 10, marginTop: 1 },
 });

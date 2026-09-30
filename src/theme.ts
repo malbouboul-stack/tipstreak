@@ -30,12 +30,15 @@ export const fonts = {
 // consecutiveWeeks = number of consecutive weeks with at least 1 tip to this creator
 export type Tier = 'supporter' | 'fanActif';
 
+export const FAN_ACTIF_WEEKLY_TIPS = 3;
+export const LEGEND_WEEKS = 8;
+
 export function getWeeklyTier(weeklyCount: number): Tier {
-  return weeklyCount >= 3 ? 'fanActif' : 'supporter';
+  return weeklyCount >= FAN_ACTIF_WEEKLY_TIPS ? 'fanActif' : 'supporter';
 }
 
 export function isLegend(consecutiveWeeks: number): boolean {
-  return consecutiveWeeks >= 8;
+  return consecutiveWeeks >= LEGEND_WEEKS;
 }
 
 export const tierLabel: Record<Tier, string> = {

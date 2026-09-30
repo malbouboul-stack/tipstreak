@@ -179,9 +179,6 @@ export default function CreatorSetupScreen() {
 
         {isCreator && (
           <>
-            <View style={styles.avatarUpload}>
-              <Text style={styles.avatarUploadText}>Photo</Text>
-            </View>
             <View style={styles.field}>
               <TextInput
                 style={styles.input}
@@ -300,12 +297,6 @@ const styles = StyleSheet.create({
   switchOn: { backgroundColor: colors.purple, borderColor: colors.purple },
   switchDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.textFaint, alignSelf: 'flex-start' },
   switchDotOn: { backgroundColor: colors.bg, alignSelf: 'flex-end' },
-  avatarUpload: {
-    width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surface2, borderWidth: 1.5,
-    borderColor: colors.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center',
-    alignSelf: 'center', marginBottom: 20,
-  },
-  avatarUploadText: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 11 },
   field: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft,
     borderRadius: 16, paddingHorizontal: 16, marginBottom: 12, justifyContent: 'center',
