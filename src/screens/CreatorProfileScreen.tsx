@@ -10,12 +10,14 @@ import { getCreatorLink, useData } from '../context/DataContext';
 import { useWallet } from '../context/WalletContext';
 import { useCreatorTips } from '../data/useCreatorTips';
 import SupportWall from '../components/SupportWall';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { RootStackParamList } from '../../App';
 
 export default function CreatorProfileScreen() {
   const navigation = useNavigation();
   const { params } = useRoute<RouteProp<RootStackParamList, 'CreatorProfile'>>();
   const { loading, getCreator, getCreatorByHandle, getSupportRelation } = useData();
+  const { t } = useLanguage();
 
   const creator = params.creatorId ? getCreator(params.creatorId) : getCreatorByHandle(params.handle ?? '');
   const relation = creator ? getSupportRelation(creator.id) : undefined;
@@ -38,10 +40,12 @@ export default function CreatorProfileScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={[styles.container, { flex: 1, alignItems: 'center', justifyContent: 'center' }]}>
-          <Text style={[styles.name, { marginBottom: 8 }]}>Créateur introuvable</Text>
-          <Text style={[styles.bio, { marginBottom: 20 }]}>Aucun créateur ne correspond à « {params.handle ?? params.creatorId} ».</Text>
+          <Text style={[styles.name, { marginBottom: 8 }]}>{t('creator.notFound')}</Text>
+          <Text style={[styles.bio, { marginBottom: 20 }]}>
+            {t('creator.notFoundText', { handle: params.handle ?? params.creatorId ?? '' })}
+          </Text>
           <GradientButton
-            label="Découvrir des créateurs"
+            label={t('creator.browse')}
             style={{ width: '100%' }}
             onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Tabs'))}
           />
@@ -58,23 +62,25 @@ export default function CreatorProfileScreen() {
   const consecutiveWeeks = relation?.consecutiveWeeks ?? 0;
   const loyaltyTiers = [
     {
-      title: '💜 Supporter',
+      title: `💜 ${t('tier.supporter')}`,
       unlocked: !!relation,
-      progress: relation ? 'Débloqué' : 'Envoie ton premier tip pour le débloquer',
+      progress: relation ? t('creator.unlocked') : t('creator.supporterLocked'),
     },
     {
-      title: '🔥 Fan actif',
+      title: `🔥 ${t('tier.fanActif')}`,
       unlocked: weeklyCount >= FAN_ACTIF_WEEKLY_TIPS,
       progress:
         weeklyCount >= FAN_ACTIF_WEEKLY_TIPS
-          ? 'Débloqué cette semaine'
-          : `${weeklyCount}/${FAN_ACTIF_WEEKLY_TIPS} tips cette semaine`,
+          ? t('creator.unlockedThisWeek')
+          : t('creator.fanProgress', { count: weeklyCount, goal: FAN_ACTIF_WEEKLY_TIPS }),
     },
     {
-      title: '🏆 Légende',
+      title: `🏆 ${t('tier.legend')}`,
       unlocked: consecutiveWeeks >= LEGEND_WEEKS,
       progress:
-        consecutiveWeeks >= LEGEND_WEEKS ? 'Débloqué' : `${consecutiveWeeks}/${LEGEND_WEEKS} semaines d'affilée avec au moins 1 tip`,
+        consecutiveWeeks >= LEGEND_WEEKS
+          ? t('creator.unlocked')
+          : t('creator.legendProgress', { count: consecutiveWeeks, goal: LEGEND_WEEKS }),
     },
   ];
 
@@ -88,7 +94,7 @@ export default function CreatorProfileScreen() {
           <View style={{ width: 34 }} />
           <TouchableOpacity
             style={styles.iconBtn}
-            onPress={() => Share.share({ message: `Soutiens ${creator.name} sur TipStreak : ${link}` })}
+            onPress={() => Share.share({ message: t('creator.shareMessage', { name: creator.name, link }) })}
           >
             <ShareIcon />
           </TouchableOpacity>
@@ -102,41 +108,41 @@ export default function CreatorProfileScreen() {
           </View>
           <Text style={styles.name}>{creator.name}</Text>
           <Text style={styles.cat}>{creator.category}</Text>
-          <Text style={styles.link}>🔗 {link} · partagé par le créateur</Text>
+          <Text style={styles.link}>🔗 {link} · {t('creator.linkShared')}</Text>
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.stat}>
             <Text style={styles.statN}>{creator.supporters}</Text>
-            <Text style={styles.statL}>Supporters</Text>
+            <Text style={styles.statL}>{t('common.supporters')}</Text>
           </View>
           <View style={styles.stat}>
             <Text style={styles.statN}>{creator.totalReceived}</Text>
-            <Text style={styles.statL}>USDC reçus</Text>
+            <Text style={styles.statL}>{t('creator.usdcReceived')}</Text>
           </View>
           <View style={styles.stat}>
             <Text style={[styles.statN, { color: colors.green }]}>🔥 {relation?.consecutiveWeeks ?? 0}</Text>
-            <Text style={styles.statL}>Toi : streak</Text>
+            <Text style={styles.statL}>{t('creator.yourStreak')}</Text>
           </View>
         </View>
 
         <Text style={styles.bio}>{creator.bio}</Text>
 
-        <Text style={styles.sectionLabel}>Mur des soutiens</Text>
+        <Text style={styles.sectionLabel}>{t('creator.wall')}</Text>
         <View style={{ marginBottom: 16 }}>
           <SupportWall
             tips={tips}
             loading={tipsLoading}
             currentWallet={publicKey}
-            emptyText={`Personne n'a encore soutenu ${creator.name}. Sois le premier !`}
+            emptyText={t('creator.wallEmpty', { name: creator.name })}
           />
         </View>
 
         {isOwnPage ? (
-          <Text style={styles.ownPageNote}>C'est ta page : voilà ce que voient tes fans.</Text>
+          <Text style={styles.ownPageNote}>{t('creator.ownPage')}</Text>
         ) : (
           <>
-            <Text style={styles.sectionLabel}>Tes paliers de fidélité</Text>
+            <Text style={styles.sectionLabel}>{t('creator.tiers')}</Text>
             {loyaltyTiers.map((tier) => (
               <View key={tier.title} style={styles.perkRow}>
                 <View style={[styles.lock, tier.unlocked && { backgroundColor: 'rgba(20,241,149,0.12)' }]}>
@@ -150,7 +156,7 @@ export default function CreatorProfileScreen() {
             ))}
 
             <GradientButton
-              label="Envoyer un tip"
+              label={t('creator.sendTip')}
               style={{ marginTop: 20 }}
               onPress={() => navigation.navigate('Tip', { creatorId: creator.id })}
             />

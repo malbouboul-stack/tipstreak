@@ -7,6 +7,7 @@ import { ChevronLeft, BoltIcon } from '../components/Icons';
 import GradientButton from '../components/GradientButton';
 import { useData } from '../context/DataContext';
 import { useWallet } from '../context/WalletContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { RootStackParamList } from '../../App';
 
 const QUICK_AMOUNTS = [1, 5, 10, 25];
@@ -20,6 +21,7 @@ export default function TipScreen() {
   const creator = getCreator(creatorId);
   const relation = getSupportRelation(creatorId);
   const { publicKey, connecting, connect, sendTip, sendBoost, refreshBalances } = useWallet();
+  const { t, translateError } = useLanguage();
 
   const [amount, setAmount] = useState(5);
   const [customAmount, setCustomAmount] = useState('');
@@ -33,17 +35,17 @@ export default function TipScreen() {
     return (
       <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
-          <Text style={[styles.title, { marginBottom: 10 }]}>Connecte ton wallet</Text>
+          <Text style={[styles.title, { marginBottom: 10 }]}>{t('tip.connectTitle')}</Text>
           <Text style={{ color: colors.textDim, fontFamily: fonts.body, fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
-            Il faut un wallet connecté pour envoyer un tip à {creator.name}.
+            {t('tip.connectText', { name: creator.name })}
           </Text>
           {connecting ? (
             <ActivityIndicator color={colors.purple} />
           ) : (
-            <GradientButton label="Connecter mon wallet" onPress={connect} style={{ width: '100%' }} />
+            <GradientButton label={t('tip.connectButton')} onPress={connect} style={{ width: '100%' }} />
           )}
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 16 }}>
-            <Text style={{ color: colors.textFaint, fontFamily: fonts.body, fontSize: 13 }}>Annuler</Text>
+            <Text style={{ color: colors.textFaint, fontFamily: fonts.body, fontSize: 13 }}>{t('common.cancel')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -60,7 +62,7 @@ export default function TipScreen() {
             <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()}>
               <ChevronLeft />
             </TouchableOpacity>
-            <Text style={styles.title}>Envoyer un tip</Text>
+            <Text style={styles.title}>{t('tip.title')}</Text>
             <View style={{ width: 34 }} />
           </View>
 
@@ -70,11 +72,11 @@ export default function TipScreen() {
             </View>
             <View>
               <Text style={styles.creatorName}>{creator.name}</Text>
-              <Text style={styles.creatorStreak}>🔥 Ton streak : {relation?.consecutiveWeeks ?? 0} semaines</Text>
+              <Text style={styles.creatorStreak}>{t('tip.streak', { count: relation?.consecutiveWeeks ?? 0 })}</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionLabel}>Montant rapide</Text>
+          <Text style={styles.sectionLabel}>{t('tip.quickAmount')}</Text>
           <View style={styles.chipsRow}>
             {QUICK_AMOUNTS.map((a) => (
               <TouchableOpacity
@@ -105,8 +107,8 @@ export default function TipScreen() {
               <BoltIcon />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.boostTitle}>Booster avec SKR</Text>
-              <Text style={styles.boostSub}>Ton tip épinglé en haut du profil · {BOOST_COST_SKR} TSKR</Text>
+              <Text style={styles.boostTitle}>{t('tip.boostTitle')}</Text>
+              <Text style={styles.boostSub}>{t('tip.boostSub', { cost: BOOST_COST_SKR })}</Text>
             </View>
             <View style={[styles.switch, boosted && styles.switchOn]}>
               <View style={[styles.switchDot, boosted && styles.switchDotOn]} />
@@ -116,7 +118,7 @@ export default function TipScreen() {
           <View style={styles.field}>
             <TextInput
               style={styles.input}
-              placeholder="Ajouter un message (optionnel)"
+              placeholder={t('tip.messagePlaceholder')}
               placeholderTextColor={colors.textFaint}
               value={message}
               onChangeText={setMessage}
@@ -125,7 +127,7 @@ export default function TipScreen() {
           </View>
 
           <GradientButton
-            label={sending ? 'Envoi en cours...' : `Confirmer le tip · ${finalAmount || 0} USDC`}
+            label={sending ? t('tip.sending') : t('tip.confirm', { amount: finalAmount || 0 })}
             style={{ marginTop: 'auto' }}
             disabled={!finalAmount || sending}
             onPress={async () => {
@@ -142,8 +144,11 @@ export default function TipScreen() {
                   } catch (boostError: any) {
                     console.error('Boost error', boostError);
                     Alert.alert(
-                      'Tip envoyé, boost échoué',
-                      `Ton tip de ${finalAmount} USDC est bien parti, mais le boost SKR a échoué (${boostError?.message ?? 'solde TSKR insuffisant ?'}).`
+                      t('tip.boostFailedTitle'),
+                      t('tip.boostFailedText', {
+                        amount: finalAmount,
+                        error: translateError(boostError?.message, 'tip.boostFailedDefault'),
+                      })
                     );
                   }
                 }
@@ -154,27 +159,27 @@ export default function TipScreen() {
                   await recordTip({ signature: tipSignature, creatorId: creator.id, boostSignature });
                 } catch (recordErr: any) {
                   console.error('Record tip error', recordErr, tipSignature);
-                  recordError = recordErr?.message ?? 'erreur inconnue';
+                  recordError = translateError(recordErr?.message);
                 }
 
                 await refreshBalances();
 
                 if (recordError) {
                   Alert.alert(
-                    'Tip envoyé, pas enregistré',
-                    `Ton tip de ${finalAmount} USDC est bien parti sur la blockchain, mais TipStreak n'a pas pu l'enregistrer (${recordError}). Il n'apparaîtra pas dans ton historique ni ton streak.`,
-                    [{ text: 'OK', onPress: () => navigation.goBack() }]
+                    t('tip.notRecordedTitle'),
+                    t('tip.notRecordedText', { amount: finalAmount, error: recordError }),
+                    [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
                   );
                 } else if (!boosted || boostSignature) {
                   Alert.alert(
-                    'Tip envoyé !',
-                    `${finalAmount} USDC envoyés à ${creator.name}.${boostSignature ? ' Boost activé ⚡' : ''}`,
-                    [{ text: 'OK', onPress: () => navigation.goBack() }]
+                    t('tip.successTitle'),
+                    t('tip.successText', { amount: finalAmount, name: creator.name }) + (boostSignature ? t('tip.successBoost') : ''),
+                    [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
                   );
                 }
               } catch (e: any) {
                 console.error('Send tip error', e);
-                Alert.alert('Échec de l\'envoi', e?.message ?? 'La transaction a échoué. Vérifie ton solde USDC.');
+                Alert.alert(t('tip.failedTitle'), translateError(e?.message, 'tip.failedDefault'));
               } finally {
                 setSending(false);
               }

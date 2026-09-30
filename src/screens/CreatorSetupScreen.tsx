@@ -9,6 +9,7 @@ import { useWallet, shortenAddress } from '../context/WalletContext';
 import { getCreatorLink, useData } from '../context/DataContext';
 import { useCreatorTips } from '../data/useCreatorTips';
 import { weekStart } from '../data/streaks';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const HANDLE = /^[a-z0-9_]{3,30}$/; // même règle que la base (cf. migration)
 
@@ -17,6 +18,7 @@ export default function CreatorSetupScreen() {
   const { publicKey, connecting, error, solBalance, usdcBalance, refreshingBalances, connect, disconnect, refreshBalances } = useWallet();
   const { myCreator, publishCreator, refresh } = useData();
   const { tips: receivedTips, loading: tipsLoading, reload: reloadTips } = useCreatorTips(myCreator?.id);
+  const { t, translateError, language, setLanguage } = useLanguage();
   const [isCreator, setIsCreator] = useState(false);
   const [handle, setHandle] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -27,8 +29,8 @@ export default function CreatorSetupScreen() {
 
   const currentWeek = weekStart(new Date());
   const receivedThisWeek = receivedTips
-    .filter((t) => t.createdAt.getTime() >= currentWeek)
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((tip) => tip.createdAt.getTime() >= currentWeek)
+    .reduce((sum, tip) => sum + tip.amount, 0);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -53,12 +55,12 @@ export default function CreatorSetupScreen() {
     try {
       const creator = await publishCreator({ handle, name: displayName, category, bio });
       Alert.alert(
-        myCreator ? 'Page mise à jour' : 'Ta page est en ligne 🎉',
-        `Elle apparaît dans « Découvrir ». Ton lien : ${getCreatorLink(creator)}`
+        myCreator ? t('profile.updatedTitle') : t('profile.publishedTitle'),
+        t('profile.publishedText', { link: getCreatorLink(creator) })
       );
     } catch (e: any) {
       console.error('Publish creator error', e);
-      Alert.alert('Publication impossible', e?.message ?? 'Réessaie dans un instant.');
+      Alert.alert(t('profile.publishFailedTitle'), translateError(e?.message, 'profile.retryLater'));
     } finally {
       setPublishing(false);
     }
@@ -71,30 +73,47 @@ export default function CreatorSetupScreen() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />}
       >
-        <Text style={styles.title}>{myCreator ? 'Mon espace créateur' : 'Devenir créateur'}</Text>
+        <View style={styles.titleRow}>
+          <Text style={[styles.title, { marginBottom: 0 }]}>
+            {myCreator ? t('profile.titleCreator') : t('profile.titleNew')}
+          </Text>
+          <View style={styles.langToggle} accessibilityRole="radiogroup" accessibilityLabel={t('profile.language')}>
+            {(['fr', 'en'] as const).map((lang) => (
+              <TouchableOpacity
+                key={lang}
+                style={[styles.langOption, language === lang && styles.langOptionActive]}
+                onPress={() => setLanguage(lang)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: language === lang }}
+              >
+                <Text style={[styles.langText, language === lang && styles.langTextActive]}>{lang.toUpperCase()}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         <View style={styles.walletCard}>
           {publicKey ? (
             <>
               <View style={{ flex: 1 }}>
-                <Text style={styles.walletLabel}>Wallet connecté</Text>
+                <Text style={styles.walletLabel}>{t('profile.walletConnected')}</Text>
                 <Text style={styles.walletAddress}>{shortenAddress(publicKey)}</Text>
               </View>
               <TouchableOpacity onPress={disconnect}>
-                <Text style={styles.walletAction}>Déconnecter</Text>
+                <Text style={styles.walletAction}>{t('profile.disconnect')}</Text>
               </TouchableOpacity>
             </>
           ) : (
             <>
               <View style={{ flex: 1 }}>
-                <Text style={styles.walletLabel}>Aucun wallet connecté</Text>
-                <Text style={styles.walletSub}>Connecte Phantom ou Solflare pour recevoir des tips</Text>
+                <Text style={styles.walletLabel}>{t('profile.noWallet')}</Text>
+                <Text style={styles.walletSub}>{t('profile.noWalletSub')}</Text>
               </View>
               {connecting ? (
                 <ActivityIndicator color={colors.purple} />
               ) : (
                 <TouchableOpacity onPress={connect}>
-                  <Text style={styles.walletAction}>Connecter</Text>
+                  <Text style={styles.walletAction}>{t('profile.connect')}</Text>
                 </TouchableOpacity>
               )}
             </>
@@ -119,28 +138,28 @@ export default function CreatorSetupScreen() {
               {refreshingBalances ? (
                 <ActivityIndicator size="small" color={colors.textDim} />
               ) : (
-                <Text style={styles.walletAction}>Actualiser</Text>
+                <Text style={styles.walletAction}>{t('profile.refresh')}</Text>
               )}
             </TouchableOpacity>
           </View>
         )}
-        {error && <Text style={styles.walletError}>{error}</Text>}
+        {error && <Text style={styles.walletError}>{translateError(error)}</Text>}
 
         {myCreator && (
           <View style={styles.dashboard}>
-            <Text style={styles.dashTitle}>Ta page · {getCreatorLink(myCreator)}</Text>
+            <Text style={styles.dashTitle}>{t('profile.yourPage', { link: getCreatorLink(myCreator) })}</Text>
             <View style={styles.dashStats}>
               <View style={styles.dashStat}>
                 <Text style={styles.dashN}>{myCreator.supporters}</Text>
-                <Text style={styles.dashL}>Supporters</Text>
+                <Text style={styles.dashL}>{t('common.supporters')}</Text>
               </View>
               <View style={styles.dashStat}>
                 <Text style={[styles.dashN, { color: colors.green }]}>{receivedThisWeek.toFixed(2)}</Text>
-                <Text style={styles.dashL}>USDC cette semaine</Text>
+                <Text style={styles.dashL}>{t('profile.usdcThisWeek')}</Text>
               </View>
               <View style={styles.dashStat}>
                 <Text style={styles.dashN}>{myCreator.totalReceived.toFixed(2)}</Text>
-                <Text style={styles.dashL}>USDC au total</Text>
+                <Text style={styles.dashL}>{t('profile.usdcTotal')}</Text>
               </View>
             </View>
             <View style={styles.dashActions}>
@@ -148,29 +167,25 @@ export default function CreatorSetupScreen() {
                 style={styles.dashBtn}
                 onPress={() => navigation.navigate('CreatorProfile', { creatorId: myCreator.id })}
               >
-                <Text style={styles.walletAction}>Voir ma page</Text>
+                <Text style={styles.walletAction}>{t('profile.viewPage')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.dashBtn}
-                onPress={() => Share.share({ message: `Soutiens-moi sur TipStreak : ${getCreatorLink(myCreator)}` })}
+                onPress={() => Share.share({ message: t('profile.shareMessage', { link: getCreatorLink(myCreator) }) })}
               >
-                <Text style={styles.walletAction}>Partager mon lien</Text>
+                <Text style={styles.walletAction}>{t('profile.shareLink')}</Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.sectionLabel}>Derniers tips reçus</Text>
-            <SupportWall
-              tips={receivedTips}
-              loading={tipsLoading}
-              emptyText="Aucun tip reçu pour l'instant. Partage ton lien à ta communauté !"
-            />
+            <Text style={styles.sectionLabel}>{t('profile.latestTips')}</Text>
+            <SupportWall tips={receivedTips} loading={tipsLoading} emptyText={t('profile.noTipsYet')} />
           </View>
         )}
 
         <TouchableOpacity style={styles.toggleRow} onPress={() => setIsCreator(!isCreator)} activeOpacity={0.85}>
           <View>
-            <Text style={styles.toggleLabel}>{myCreator ? 'Modifier ma page' : 'Recevoir des tips'}</Text>
-            <Text style={styles.toggleSub}>{myCreator ? 'Nom, handle, catégorie, bio' : 'Active ta page publique'}</Text>
+            <Text style={styles.toggleLabel}>{myCreator ? t('profile.editPage') : t('profile.receiveTips')}</Text>
+            <Text style={styles.toggleSub}>{myCreator ? t('profile.editPageSub') : t('profile.receiveTipsSub')}</Text>
           </View>
           <View style={[styles.switch, isCreator && styles.switchOn]}>
             <View style={[styles.switchDot, isCreator && styles.switchDotOn]} />
@@ -182,7 +197,7 @@ export default function CreatorSetupScreen() {
             <View style={styles.field}>
               <TextInput
                 style={styles.input}
-                placeholder="Nom d'affichage"
+                placeholder={t('profile.namePlaceholder')}
                 placeholderTextColor={colors.textFaint}
                 value={displayName}
                 onChangeText={setDisplayName}
@@ -193,7 +208,7 @@ export default function CreatorSetupScreen() {
               <Text style={styles.handlePrefix}>tipstreak://</Text>
               <TextInput
                 style={[styles.input, { flex: 1 }]}
-                placeholder="ton_handle"
+                placeholder={t('profile.handlePlaceholder')}
                 placeholderTextColor={colors.textFaint}
                 value={handle}
                 // Uniquement ce que la base accepte : minuscules, chiffres, _
@@ -204,12 +219,12 @@ export default function CreatorSetupScreen() {
               />
             </View>
             {handle.length > 0 && !handleValid && (
-              <Text style={styles.fieldHint}>Au moins 3 caractères : lettres minuscules, chiffres ou _</Text>
+              <Text style={styles.fieldHint}>{t('profile.handleHint')}</Text>
             )}
             <View style={styles.field}>
               <TextInput
                 style={styles.input}
-                placeholder="Catégorie (Musique, Dev, Art...)"
+                placeholder={t('profile.categoryPlaceholder')}
                 placeholderTextColor={colors.textFaint}
                 value={category}
                 onChangeText={setCategory}
@@ -219,7 +234,7 @@ export default function CreatorSetupScreen() {
             <View style={[styles.field, { height: 70, alignItems: 'flex-start', paddingTop: 4 }]}>
               <TextInput
                 style={[styles.input, { paddingTop: 10 }]}
-                placeholder="Courte bio"
+                placeholder={t('profile.bioPlaceholder')}
                 placeholderTextColor={colors.textFaint}
                 value={bio}
                 onChangeText={setBio}
@@ -229,17 +244,17 @@ export default function CreatorSetupScreen() {
             </View>
 
             <GradientButton
-              label={publishing ? 'Signature en cours...' : myCreator ? 'Mettre à jour ma page' : 'Publier ma page'}
+              label={publishing ? t('profile.signing') : myCreator ? t('profile.update') : t('profile.publish')}
               style={{ marginTop: 'auto' }}
               disabled={!publicKey || !handleValid || !displayName.trim() || !category.trim() || publishing}
               onPress={onPublish}
             />
             <Text style={styles.previewNote}>
               {!publicKey
-                ? 'Connecte ton wallet : les tips arriveront directement dessus'
+                ? t('profile.noteConnect')
                 : myCreator
-                  ? `Ta page est en ligne : ${getCreatorLink(myCreator)}`
-                  : 'Ton wallet te demandera de signer un message (gratuit) pour prouver qu\'il t\'appartient'}
+                  ? t('profile.noteOnline', { link: getCreatorLink(myCreator) })
+                  : t('profile.noteSign')}
             </Text>
           </>
         )}
@@ -252,6 +267,15 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   container: { flexGrow: 1, padding: 20 },
   handleField: { flexDirection: 'row', alignItems: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  langToggle: {
+    flexDirection: 'row', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft,
+    borderRadius: 10, padding: 2,
+  },
+  langOption: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8 },
+  langOptionActive: { backgroundColor: colors.purple },
+  langText: { color: colors.textFaint, fontFamily: fonts.bodyBold, fontSize: 11 },
+  langTextActive: { color: colors.text },
   dashboard: { marginBottom: 8 },
   dashTitle: { color: colors.textDim, fontFamily: fonts.bodySemi, fontSize: 12, marginBottom: 10 },
   dashStats: {

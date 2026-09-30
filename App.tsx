@@ -15,6 +15,7 @@ import CreatorProfileScreen from './src/screens/CreatorProfileScreen';
 import TipScreen from './src/screens/TipScreen';
 import { WalletProvider } from './src/context/WalletContext';
 import { DataProvider } from './src/context/DataContext';
+import { LanguageProvider } from './src/i18n/LanguageContext';
 import { colors } from './src/theme';
 
 export type RootStackParamList = {
@@ -53,17 +54,19 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <WalletProvider>
-        <DataProvider>
-          <NavigationContainer linking={linking}>
-            <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-              <Stack.Screen name="Tabs" component={BottomTabs} />
-              <Stack.Screen name="CreatorProfile" component={CreatorProfileScreen} />
-              <Stack.Screen name="Tip" component={TipScreen} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </DataProvider>
-      </WalletProvider>
+      <LanguageProvider>
+        <WalletProvider>
+          <DataProvider>
+            <NavigationContainer linking={linking}>
+              <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+                <Stack.Screen name="Tabs" component={BottomTabs} />
+                <Stack.Screen name="CreatorProfile" component={CreatorProfileScreen} />
+                <Stack.Screen name="Tip" component={TipScreen} />
+              </Stack.Navigator>
+            </NavigationContainer>
+          </DataProvider>
+        </WalletProvider>
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }

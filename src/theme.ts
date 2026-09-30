@@ -40,8 +40,4 @@ export function getWeeklyTier(weeklyCount: number): Tier {
 export function isLegend(consecutiveWeeks: number): boolean {
   return consecutiveWeeks >= LEGEND_WEEKS;
 }
-
-export const tierLabel: Record<Tier, string> = {
-  supporter: 'Supporter',
-  fanActif: 'Fan actif',
-};
+// Libellés des badges : voir src/i18n/translations.ts (tier.*)

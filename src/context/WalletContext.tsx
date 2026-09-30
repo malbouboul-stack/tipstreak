@@ -24,17 +24,20 @@ async function waitForConfirmation(signature: string, timeoutMs = 30000): Promis
   while (Date.now() < deadline) {
     const { value } = await connection.getSignatureStatuses([signature]);
     const status = value[0];
-    if (status?.err) throw new Error('La transaction a échoué on-chain');
+    if (status?.err) throw new Error('error.txFailed');
     if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') return;
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  throw new Error("Transaction envoyée mais pas encore confirmée par le réseau");
+  throw new Error('error.txNotConfirmed');
 }
+
+// Les erreurs levées ici portent une clé de traduction (src/i18n/translations.ts) :
+// les écrans les affichent dans la langue choisie via translateError().
 
 type WalletContextType = {
   publicKey: string | null;
   connecting: boolean;
-  error: string | null;
+  error: string | null; // clé de traduction
   solBalance: number | null;
   usdcBalance: number | null;
   refreshingBalances: boolean;
@@ -116,18 +119,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       });
     } catch (e: any) {
       console.error('Wallet connect error', e);
-      setError(
-        e?.message?.includes('No wallet')
-          ? "Aucun wallet compatible trouvé sur ce téléphone (installe Phantom ou Solflare)."
-          : "Connexion au wallet annulée ou échouée."
-      );
+      setError(e?.message?.includes('No wallet') ? 'error.noWalletApp' : 'error.connectFailed');
     } finally {
       setConnecting(false);
     }
   };
 
   const sendTip = async (recipientAddress: string, amountUsdc: number, message?: string): Promise<string> => {
-    if (!publicKey) throw new Error('Wallet non connecté');
+    if (!publicKey) throw new Error('error.walletNotConnected');
 
     let signature = '';
 
@@ -193,7 +192,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const sendBoost = async (amountSkr: number): Promise<string> => {
-    if (!publicKey) throw new Error('Wallet non connecté');
+    if (!publicKey) throw new Error('error.walletNotConnected');
 
     let signature = '';
     const skrMint = new PublicKey(SKR_MINT_ADDRESS);
@@ -252,7 +251,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Signature d'un simple message (gratuit, aucune transaction) : prouve qu'on possède le wallet.
   // Renvoie la charge signée telle que le wallet la fournit ; le serveur en extrait la signature.
   const signMessage = async (message: string): Promise<Uint8Array> => {
-    if (!publicKey) throw new Error('Wallet non connecté');
+    if (!publicKey) throw new Error('error.walletNotConnected');
 
     return transact(async (wallet: Web3MobileWallet) => {
       const authResult = await wallet.authorize({
@@ -266,7 +265,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       const account = authResult.accounts[0];
       if (new PublicKey(Buffer.from(account.address, 'base64')).toBase58() !== publicKey) {
-        throw new Error("Le wallet a changé depuis la connexion : reconnecte-le dans l'onglet Profil");
+        throw new Error('error.walletChanged');
       }
 
       const [signedPayload] = await wallet.signMessages({

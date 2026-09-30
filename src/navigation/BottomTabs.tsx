@@ -7,6 +7,7 @@ import DiscoverScreen from '../screens/DiscoverScreen';
 import SupportScreen from '../screens/SupportScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import CreatorSetupScreen from '../screens/CreatorSetupScreen';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export type TabParamList = {
   Discover: undefined;
@@ -19,6 +20,7 @@ const Tab = createBottomTabNavigator<TabParamList>();
 
 export default function BottomTabs() {
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
 
   return (
     <Tab.Navigator
@@ -41,7 +43,7 @@ export default function BottomTabs() {
         name="Discover"
         component={DiscoverScreen}
         options={{
-          title: 'Découvrir',
+          title: t('tabs.discover'),
           tabBarIcon: ({ focused }) => <SearchIcon size={19} color={focused ? colors.green : colors.textFaint} />,
         }}
       />
@@ -49,7 +51,7 @@ export default function BottomTabs() {
         name="Support"
         component={SupportScreen}
         options={{
-          title: 'Soutiens',
+          title: t('tabs.support'),
           tabBarIcon: ({ focused }) => <HeartIcon size={19} color={focused ? colors.green : colors.textFaint} />,
         }}
       />
@@ -57,7 +59,7 @@ export default function BottomTabs() {
         name="History"
         component={HistoryScreen}
         options={{
-          title: 'Historique',
+          title: t('tabs.history'),
           tabBarIcon: ({ focused }) => <ClockIcon size={19} color={focused ? colors.green : colors.textFaint} />,
         }}
       />
@@ -65,7 +67,7 @@ export default function BottomTabs() {
         name="CreatorSetup"
         component={CreatorSetupScreen}
         options={{
-          title: 'Profil',
+          title: t('tabs.profile'),
           tabBarIcon: ({ focused }) => <UserIcon size={19} color={focused ? colors.green : colors.textFaint} />,
         }}
       />

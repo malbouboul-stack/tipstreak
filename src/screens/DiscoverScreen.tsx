@@ -6,8 +6,9 @@ import { colors, fonts } from '../theme';
 import { SearchIcon } from '../components/Icons';
 import TierBadge from '../components/TierBadge';
 import { Creator, useData } from '../context/DataContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
-const ALL = 'Tout';
+const ALL = '__all__'; // filtre "Tout" : libellé traduit à l'affichage
 
 // "Musique · Producteur" → "Musique" : les créateurs écrivent librement leur catégorie,
 // on regroupe sur le premier mot-clé, sans tenir compte des majuscules
@@ -19,6 +20,7 @@ function mainCategory(category: string): string {
 export default function DiscoverScreen() {
   const navigation = useNavigation();
   const { creators, getSupportRelation, loading, error, refresh } = useData();
+  const { t, translateError } = useLanguage();
   const [query, setQuery] = useState('');
   const [selectedCategory, setCategory] = useState(ALL);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,7 +71,7 @@ export default function DiscoverScreen() {
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={styles.count}>{creator.supporters}</Text>
-          <Text style={styles.countLbl}>supporters</Text>
+          <Text style={styles.countLbl}>{t('discover.supportersLower')}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -78,13 +80,13 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
-        <Text style={styles.title}>Découvrir</Text>
+        <Text style={styles.title}>{t('discover.title')}</Text>
 
         <View style={styles.searchField}>
           <SearchIcon size={16} color={colors.textFaint} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Chercher un créateur"
+            placeholder={t('discover.search')}
             placeholderTextColor={colors.textFaint}
             value={query}
             onChangeText={setQuery}
@@ -98,7 +100,7 @@ export default function DiscoverScreen() {
               style={[styles.pill, category === cat && styles.pillActive]}
               onPress={() => setCategory(cat)}
             >
-              <Text style={[styles.pillText, category === cat && styles.pillTextActive]}>{cat}</Text>
+              <Text style={[styles.pillText, category === cat && styles.pillTextActive]}>{cat === ALL ? t('discover.all') : cat}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -108,16 +110,16 @@ export default function DiscoverScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.purple} />}
         >
           {loading && creators.length === 0 && <ActivityIndicator color={colors.purple} style={{ marginTop: 24 }} />}
-          {error && <Text style={styles.error}>{error}</Text>}
+          {error && <Text style={styles.error}>{translateError(error)}</Text>}
           {trending.length > 0 && (
             <>
-              <Text style={styles.sectionLabel}>Tendances cette semaine</Text>
+              <Text style={styles.sectionLabel}>{t('discover.trending')}</Text>
               {trending.map(renderRow)}
             </>
           )}
           {fresh.length > 0 && (
             <>
-              <Text style={[styles.sectionLabel, { marginTop: 14 }]}>Nouveaux sur TipStreak</Text>
+              <Text style={[styles.sectionLabel, { marginTop: 14 }]}>{t('discover.new')}</Text>
               {fresh.map(renderRow)}
             </>
           )}

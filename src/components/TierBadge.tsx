@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, fonts, gradient, getWeeklyTier, isLegend, tierLabel } from '../theme';
+import { colors, fonts, getWeeklyTier, isLegend } from '../theme';
+import { useLanguage } from '../i18n/LanguageContext';
 
 type Props = {
   weeklyCount: number;
@@ -9,13 +10,14 @@ type Props = {
 };
 
 export default function TierBadge({ weeklyCount, consecutiveWeeks }: Props) {
+  const { t } = useLanguage();
   const legend = isLegend(consecutiveWeeks);
   const tier = getWeeklyTier(weeklyCount);
 
   if (legend) {
     return (
       <View style={[styles.badge, { backgroundColor: 'rgba(255,184,77,0.12)', borderColor: 'rgba(255,184,77,0.4)' }]}>
-        <Text style={[styles.text, { color: colors.gold }]}>🏆 Légende</Text>
+        <Text style={[styles.text, { color: colors.gold }]}>🏆 {t('tier.legend')}</Text>
       </View>
     );
   }
@@ -28,14 +30,14 @@ export default function TierBadge({ weeklyCount, consecutiveWeeks }: Props) {
         end={{ x: 1, y: 0 }}
         style={[styles.badge, { borderColor: 'rgba(20,241,149,0.4)' }]}
       >
-        <Text style={[styles.text, { color: colors.green }]}>🔥 {tierLabel.fanActif}</Text>
+        <Text style={[styles.text, { color: colors.green }]}>🔥 {t('tier.fanActif')}</Text>
       </LinearGradient>
     );
   }
 
   return (
     <View style={[styles.badge, { backgroundColor: 'rgba(153,69,255,0.14)', borderColor: 'rgba(153,69,255,0.35)' }]}>
-      <Text style={[styles.text, { color: colors.purple }]}>{tierLabel.supporter}</Text>
+      <Text style={[styles.text, { color: colors.purple }]}>{t('tier.supporter')}</Text>
     </View>
   );
 }

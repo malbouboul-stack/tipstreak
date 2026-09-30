@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { colors, fonts } from '../theme';
 import { CreatorTip } from '../data/useCreatorTips';
 import { shortenAddress } from '../context/WalletContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
 // Un tip boosté reste épinglé en haut du mur pendant 7 jours
 const PIN_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
@@ -14,17 +15,19 @@ type Props = {
   emptyText: string;
 };
 
-function formatRelative(date: Date): string {
-  const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
-  if (minutes < 1) return "à l'instant";
-  if (minutes < 60) return `il y a ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `il y a ${hours} h`;
-  if (hours < 48) return 'hier';
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-}
-
 export default function SupportWall({ tips, loading, currentWallet, emptyText }: Props) {
+  const { t, locale } = useLanguage();
+
+  const formatRelative = (date: Date): string => {
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+    if (minutes < 1) return t('wall.justNow');
+    if (minutes < 60) return t('wall.minutesAgo', { count: minutes });
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return t('wall.hoursAgo', { count: hours });
+    if (hours < 48) return t('wall.yesterday');
+    return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
+  };
+
   if (loading && tips.length === 0) {
     return <ActivityIndicator color={colors.purple} style={{ marginVertical: 16 }} />;
   }
@@ -40,8 +43,8 @@ export default function SupportWall({ tips, loading, currentWallet, emptyText }:
     <View key={tip.signature} style={[styles.row, isPinned && styles.rowPinned]}>
       <View style={{ flex: 1 }}>
         <View style={styles.headLine}>
-          <Text style={styles.fan}>{tip.fanWallet === currentWallet ? 'Toi' : shortenAddress(tip.fanWallet)}</Text>
-          {isPinned && <Text style={styles.pinTag}>⚡ Épinglé</Text>}
+          <Text style={styles.fan}>{tip.fanWallet === currentWallet ? t('wall.you') : shortenAddress(tip.fanWallet)}</Text>
+          {isPinned && <Text style={styles.pinTag}>{t('wall.pinned')}</Text>}
           <Text style={styles.time}>{formatRelative(tip.createdAt)}</Text>
         </View>
         {tip.message && <Text style={styles.message}>« {tip.message} »</Text>}

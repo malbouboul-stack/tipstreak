@@ -31,7 +31,7 @@ type DataContextType = {
   myTips: Tip[]; // tips envoyés par le wallet connecté, du plus récent au plus ancien
   mySupport: SupportRelation[];
   loading: boolean;
-  error: string | null;
+  error: string | null; // clé de traduction
   refresh: () => Promise<void>;
   getCreator: (id: string) => Creator | undefined;
   getCreatorByHandle: (handle: string) => Creator | undefined;
@@ -133,7 +133,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setTipRows((tipsRes?.data as TipRow[] | undefined) ?? []);
     } catch (e: any) {
       console.error('Supabase fetch error', e);
-      setError('Impossible de charger les données. Vérifie ta connexion.');
+      setError('discover.loadError');
     } finally {
       setLoading(false);
     }
@@ -155,7 +155,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const publishCreator = useCallback<DataContextType['publishCreator']>(
     async (input) => {
-      if (!publicKey) throw new Error('Connecte ton wallet pour publier ta page');
+      if (!publicKey) throw new Error('error.connectToPublish');
 
       // Mêmes nettoyages que côté serveur, pour que le message signé soit identique
       const profile = {

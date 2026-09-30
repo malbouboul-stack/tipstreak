@@ -5,15 +5,13 @@ import { colors, fonts } from '../theme';
 import { TipSentIcon } from '../components/Icons';
 import { Tip, useData } from '../context/DataContext';
 import { useWallet } from '../context/WalletContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
-// "AUJOURD'HUI", "HIER", sinon "LUN. 15 SEPT."
-function dateGroup(date: Date): string {
+// Nombre de jours entre la date et aujourd'hui (0 = aujourd'hui, 1 = hier…)
+function daysAgo(date: Date): number {
   const day = new Date(date).setHours(0, 0, 0, 0);
   const today = new Date().setHours(0, 0, 0, 0);
-  const diffDays = Math.round((today - day) / (24 * 60 * 60 * 1000));
-  if (diffDays === 0) return "AUJOURD'HUI";
-  if (diffDays === 1) return 'HIER';
-  return date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+  return Math.round((today - day) / (24 * 60 * 60 * 1000));
 }
 
 function formatTime(date: Date): string {
@@ -23,6 +21,15 @@ function formatTime(date: Date): string {
 export default function HistoryScreen() {
   const { publicKey } = useWallet();
   const { myTips } = useData();
+  const { t, locale } = useLanguage();
+
+  // "AUJOURD'HUI", "HIER", sinon "LUN. 15 SEPT." (ou l'équivalent en anglais)
+  const dateGroup = (date: Date): string => {
+    const diff = daysAgo(date);
+    if (diff === 0) return t('history.today');
+    if (diff === 1) return t('history.yesterday');
+    return date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+  };
 
   // myTips est déjà trié du plus récent au plus ancien : l'ordre des groupes suit
   const groups = new Map<string, Tip[]>();
@@ -34,12 +41,10 @@ export default function HistoryScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Historique</Text>
+        <Text style={styles.title}>{t('history.title')}</Text>
 
         {myTips.length === 0 && (
-          <Text style={styles.empty}>
-            {publicKey ? "Aucun tip envoyé pour l'instant." : 'Connecte ton wallet (onglet Profil) pour voir ton historique.'}
-          </Text>
+          <Text style={styles.empty}>{publicKey ? t('history.emptyConnected') : t('history.emptyDisconnected')}</Text>
         )}
 
         {[...groups].map(([group, tips]) => (
@@ -55,12 +60,12 @@ export default function HistoryScreen() {
                     <Text style={styles.name}>{item.creatorName}</Text>
                     {item.boosted && (
                       <View style={styles.boostTag}>
-                        <Text style={styles.boostTagText}>⚡ Boosté</Text>
+                        <Text style={styles.boostTagText}>{t('history.boosted')}</Text>
                       </View>
                     )}
                   </View>
                   <Text style={styles.meta} numberOfLines={1}>
-                    Tip · {formatTime(item.createdAt)}
+                    {t('history.tipAt', { time: formatTime(item.createdAt) })}
                     {item.message ? ` · « ${item.message} »` : ''}
                   </Text>
                 </View>

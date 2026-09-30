@@ -7,6 +7,7 @@ import { SearchIcon } from '../components/Icons';
 import TierBadge from '../components/TierBadge';
 import { useData } from '../context/DataContext';
 import { useWallet } from '../context/WalletContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
 type Filter = 'all' | 'fanActif' | 'supporter';
 
@@ -14,6 +15,7 @@ export default function SupportScreen() {
   const navigation = useNavigation();
   const { publicKey } = useWallet();
   const { mySupport, getCreator } = useData();
+  const { t } = useLanguage();
   const [filter, setFilter] = useState<Filter>('all');
 
   const items = mySupport
@@ -27,7 +29,7 @@ export default function SupportScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.container}>
         <View style={styles.topNav}>
-          <Text style={styles.title}>Mes soutiens</Text>
+          <Text style={styles.title}>{t('support.title')}</Text>
           <View style={styles.iconBtn}>
             <SearchIcon size={16} />
           </View>
@@ -35,13 +37,13 @@ export default function SupportScreen() {
 
         <View style={styles.filterRow}>
           <TouchableOpacity style={[styles.pill, filter === 'all' && styles.pillActive]} onPress={() => setFilter('all')}>
-            <Text style={[styles.pillText, filter === 'all' && styles.pillTextActive]}>Tous ({mySupport.length})</Text>
+            <Text style={[styles.pillText, filter === 'all' && styles.pillTextActive]}>{t('support.all', { count: mySupport.length })}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.pill, filter === 'fanActif' && styles.pillActive]} onPress={() => setFilter('fanActif')}>
-            <Text style={[styles.pillText, filter === 'fanActif' && styles.pillTextActive]}>Fan actif</Text>
+            <Text style={[styles.pillText, filter === 'fanActif' && styles.pillTextActive]}>{t('tier.fanActif')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.pill, filter === 'supporter' && styles.pillActive]} onPress={() => setFilter('supporter')}>
-            <Text style={[styles.pillText, filter === 'supporter' && styles.pillTextActive]}>Supporter</Text>
+            <Text style={[styles.pillText, filter === 'supporter' && styles.pillTextActive]}>{t('tier.supporter')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -51,7 +53,7 @@ export default function SupportScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <Text style={styles.empty}>
-              {publicKey ? "Tu n'as encore envoyé aucun tip. Découvre des créateurs à soutenir !" : 'Connecte ton wallet (onglet Profil) pour voir tes soutiens.'}
+              {publicKey ? t('support.emptyConnected') : t('support.emptyDisconnected')}
             </Text>
           }
           renderItem={({ item }) => (
@@ -67,8 +69,8 @@ export default function SupportScreen() {
                 <TierBadge weeklyCount={item.relation.weeklyCount} consecutiveWeeks={item.relation.consecutiveWeeks} />
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.weeks}>{item.relation.consecutiveWeeks} sem.</Text>
-                <Text style={styles.total}>{item.relation.totalTipped} USDC total</Text>
+                <Text style={styles.weeks}>{t('support.weeks', { count: item.relation.consecutiveWeeks })}</Text>
+                <Text style={styles.total}>{t('support.total', { amount: item.relation.totalTipped })}</Text>
               </View>
             </TouchableOpacity>
           )}
