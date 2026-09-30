@@ -11,7 +11,7 @@ export type SupportRelation = {
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Début (lundi 00:00 local) de la semaine contenant `date`
-function weekStart(date: Date): number {
+export function weekStart(date: Date): number {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // getDay() : 0 = dimanche

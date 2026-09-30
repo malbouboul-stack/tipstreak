@@ -7,13 +7,20 @@ import { SearchIcon } from '../components/Icons';
 import TierBadge from '../components/TierBadge';
 import { Creator, useData } from '../context/DataContext';
 
-const CATEGORIES = ['Tout', 'Musique', 'Gaming', 'Dev', 'Art'];
+const ALL = 'Tout';
+
+// "Musique · Producteur" → "Musique" : les créateurs écrivent librement leur catégorie,
+// on regroupe sur le premier mot-clé, sans tenir compte des majuscules
+function mainCategory(category: string): string {
+  const main = category.split('·')[0].trim();
+  return main.charAt(0).toUpperCase() + main.slice(1).toLowerCase();
+}
 
 export default function DiscoverScreen() {
   const navigation = useNavigation();
   const { creators, getSupportRelation, loading, error, refresh } = useData();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('Tout');
+  const [selectedCategory, setCategory] = useState(ALL);
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = async () => {
@@ -22,9 +29,20 @@ export default function DiscoverScreen() {
     setRefreshing(false);
   };
 
+  // Filtres générés depuis la base : les plus représentées d'abord
+  const counts = new Map<string, number>();
+  for (const c of creators) {
+    const main = mainCategory(c.category);
+    counts.set(main, (counts.get(main) ?? 0) + 1);
+  }
+  const categories = [ALL, ...[...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name)];
+  // La catégorie choisie peut disparaître après un rafraîchissement
+  const category = categories.includes(selectedCategory) ? selectedCategory : ALL;
+
+  const search = query.trim().toLowerCase();
   const filtered = creators.filter((c) => {
-    const matchesQuery = c.name.toLowerCase().includes(query.toLowerCase());
-    const matchesCategory = category === 'Tout' || c.category.toLowerCase().includes(category.toLowerCase());
+    const matchesQuery = c.name.toLowerCase().includes(search) || c.handle.includes(search);
+    const matchesCategory = category === ALL || mainCategory(c.category) === category;
     return matchesQuery && matchesCategory;
   });
 
@@ -74,7 +92,7 @@ export default function DiscoverScreen() {
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catRow} contentContainerStyle={{ gap: 8 }}>
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <TouchableOpacity
               key={cat}
               style={[styles.pill, category === cat && styles.pillActive]}

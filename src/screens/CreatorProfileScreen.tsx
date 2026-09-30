@@ -7,6 +7,9 @@ import { colors, fonts } from '../theme';
 import { ChevronLeft, ShareIcon, CheckIcon, LockIcon } from '../components/Icons';
 import GradientButton from '../components/GradientButton';
 import { getCreatorLink, useData } from '../context/DataContext';
+import { useWallet } from '../context/WalletContext';
+import { useCreatorTips } from '../data/useCreatorTips';
+import SupportWall from '../components/SupportWall';
 import type { RootStackParamList } from '../../App';
 
 export default function CreatorProfileScreen() {
@@ -16,6 +19,8 @@ export default function CreatorProfileScreen() {
 
   const creator = params.creatorId ? getCreator(params.creatorId) : getCreatorByHandle(params.handle ?? '');
   const relation = creator ? getSupportRelation(creator.id) : undefined;
+  const { publicKey } = useWallet();
+  const { tips, loading: tipsLoading } = useCreatorTips(creator?.id);
 
   // Ouvert par un lien profond au démarrage : les créateurs sont encore en chargement
   if (!creator && loading) {
@@ -91,10 +96,14 @@ export default function CreatorProfileScreen() {
 
         <Text style={styles.bio}>{creator.bio}</Text>
 
-        <View style={styles.contentGrid}>
-          <View style={styles.thumb} />
-          <View style={styles.thumb} />
-          <View style={styles.thumb} />
+        <Text style={styles.sectionLabel}>Mur des soutiens</Text>
+        <View style={{ marginBottom: 16 }}>
+          <SupportWall
+            tips={tips}
+            loading={tipsLoading}
+            currentWallet={publicKey}
+            emptyText={`Personne n'a encore soutenu ${creator.name}. Sois le premier !`}
+          />
         </View>
 
         <Text style={styles.sectionLabel}>Perks</Text>
@@ -153,8 +162,6 @@ const styles = StyleSheet.create({
   statN: { color: colors.text, fontFamily: fonts.display, fontSize: 16 },
   statL: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 10 },
   bio: { color: colors.textDim, fontFamily: fonts.body, fontSize: 12, lineHeight: 18, textAlign: 'center', marginBottom: 16 },
-  contentGrid: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  thumb: { flex: 1, aspectRatio: 1, borderRadius: 12, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.borderSoft },
   sectionLabel: { color: colors.textFaint, fontFamily: fonts.bodyBold, fontSize: 12, marginBottom: 10 },
   perkRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface,
