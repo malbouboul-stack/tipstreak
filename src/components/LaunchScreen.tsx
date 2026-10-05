@@ -5,7 +5,7 @@ import { colors, fonts } from '../theme';
 import StreakMark from './StreakMark';
 import { useLanguage } from '../i18n/LanguageContext';
 
-const HOLD_AFTER_INTRO_MS = 600; // le temps que l'app se monte derrière, avant le fondu
+const HOLD_AFTER_INTRO_MS = 1100; // le temps de lire le slogan (et que l'app se monte derrière) avant le fondu
 const MAX_DURATION_MS = 6000; // on n'attend jamais plus, même si le réseau est lent
 
 type Props = {
