@@ -22,9 +22,12 @@ export const colors = {
   gold: '#FFB84D',
 };
 
-// Dégradé de marque : violet Solana → cyan Seeker (boutons, logo, barres de série)
+// Dégradé de marque : violet Solana → cyan Seeker (boutons)
 export const gradient = [colors.purple, '#5D6BFF', colors.cyan] as const;
-export const gradientStreak = [colors.cyan, colors.purple] as const; // vertical : bas → haut
+
+// Les 7 barres du logo, du lundi au dimanche : chacune sa couleur, de l'indigo au cyan,
+// comme une série qui "chauffe". La pièce (le tip) est dorée.
+export const streakColors = ['#4B3FD6', '#4F55E6', '#4C6FF0', '#3F8CF0', '#2FA9E8', '#22C6DD', '#19E3D0'] as const;
 
 export const fonts = {
   display: 'SpaceGrotesk_600SemiBold',

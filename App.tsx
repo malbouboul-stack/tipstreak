@@ -43,12 +43,32 @@ const navigationTheme: Theme = {
   colors: { ...DarkTheme.colors, background: colors.bg, card: colors.bg, primary: colors.cyan, border: colors.borderSoft },
 };
 
-// Écran de lancement animé, posé au-dessus de l'app le temps que les données arrivent
-function LaunchOverlay() {
+// L'app + son écran de lancement. Les données commencent à charger tout de suite (DataProvider),
+// mais la navigation n'est montée qu'une fois l'animation de lancement jouée : monter l'app
+// pendant l'animation la rendrait saccadée, voire invisible (surtout en développement).
+function AppShell() {
   const { loading } = useData();
-  const [visible, setVisible] = useState(true);
-  const hide = useCallback(() => setVisible(false), []);
-  return visible ? <LaunchScreen ready={!loading} onDone={hide} /> : null;
+  const [introPlayed, setIntroPlayed] = useState(false);
+  const [launchVisible, setLaunchVisible] = useState(true);
+  const mountApp = useCallback(() => setIntroPlayed(true), []);
+  const hideLaunch = useCallback(() => setLaunchVisible(false), []);
+
+  return (
+    <>
+      {introPlayed && (
+        <NavigationContainer linking={linking} theme={navigationTheme}>
+          <Stack.Navigator
+            screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'slide_from_right' }}
+          >
+            <Stack.Screen name="Tabs" component={BottomTabs} />
+            <Stack.Screen name="CreatorProfile" component={CreatorProfileScreen} />
+            <Stack.Screen name="Tip" component={TipScreen} options={{ animation: 'slide_from_bottom' }} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      )}
+      {launchVisible && <LaunchScreen ready={introPlayed && !loading} onIntroPlayed={mountApp} onDone={hideLaunch} />}
+    </>
+  );
 }
 
 export default function App() {
@@ -75,16 +95,7 @@ export default function App() {
       <LanguageProvider>
         <WalletProvider>
           <DataProvider>
-            <NavigationContainer linking={linking} theme={navigationTheme}>
-              <Stack.Navigator
-                screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'slide_from_right' }}
-              >
-                <Stack.Screen name="Tabs" component={BottomTabs} />
-                <Stack.Screen name="CreatorProfile" component={CreatorProfileScreen} />
-                <Stack.Screen name="Tip" component={TipScreen} options={{ animation: 'slide_from_bottom' }} />
-              </Stack.Navigator>
-            </NavigationContainer>
-            <LaunchOverlay />
+            <AppShell />
           </DataProvider>
         </WalletProvider>
       </LanguageProvider>

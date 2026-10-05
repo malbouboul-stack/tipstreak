@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Activi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, fonts, gradientStreak, sectionLabel } from '../theme';
+import { colors, fonts, sectionLabel, streakColors } from '../theme';
 import { SearchIcon } from '../components/Icons';
 import TierBadge from '../components/TierBadge';
 import Avatar from '../components/Avatar';
@@ -86,9 +86,8 @@ function WeekCard() {
           return (
             <View key={i} style={styles.day}>
               <View style={[styles.dayBar, isToday && styles.dayBarToday, i > todayIndex && styles.dayBarFuture]}>
-                {tipped && (
-                  <LinearGradient colors={gradientStreak} start={{ x: 0, y: 1 }} end={{ x: 0, y: 0 }} style={StyleSheet.absoluteFill} />
-                )}
+                {/* Jour où tu as envoyé un tip : la couleur de la barre correspondante du logo */}
+                {tipped && <View style={[StyleSheet.absoluteFill, { backgroundColor: streakColors[i] }]} />}
               </View>
               <Text style={[styles.dayLetter, isToday && { color: colors.cyan }]}>{letter}</Text>
             </View>
