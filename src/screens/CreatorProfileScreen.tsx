@@ -3,7 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Share, ActivityIn
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { colors, fonts, FAN_ACTIF_WEEKLY_TIPS, LEGEND_WEEKS } from '../theme';
+import { avatarColors, colors, fonts, sectionLabel, FAN_ACTIF_WEEKLY_TIPS, LEGEND_WEEKS } from '../theme';
+import Avatar from '../components/Avatar';
 import { ChevronLeft, ShareIcon, CheckIcon, LockIcon } from '../components/Icons';
 import GradientButton from '../components/GradientButton';
 import { getCreatorLink, useData } from '../context/DataContext';
@@ -100,11 +101,18 @@ export default function CreatorProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <LinearGradient colors={[colors.purple, colors.green]} style={styles.cover} />
+        {/* Bannière aux couleurs propres au créateur (les mêmes que son avatar) */}
+        <LinearGradient
+          colors={[...avatarColors(creator.handle), colors.bg]}
+          locations={[0, 0.55, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.cover}
+        />
 
         <View style={styles.head}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{creator.initial}</Text>
+          <View style={styles.avatarWrap}>
+            <Avatar seed={creator.handle} initial={creator.initial} size={72} ring />
           </View>
           <Text style={styles.name}>{creator.name}</Text>
           <Text style={styles.cat}>{creator.category}</Text>
@@ -176,25 +184,21 @@ const styles = StyleSheet.create({
     width: 34, height: 34, borderRadius: 11, backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.borderSoft, alignItems: 'center', justifyContent: 'center',
   },
-  cover: { height: 84, borderRadius: 18, marginBottom: -32 },
+  cover: { height: 96, borderRadius: 22, marginBottom: -38 },
   head: { alignItems: 'center', paddingBottom: 14 },
-  avatar: {
-    width: 64, height: 64, borderRadius: 32, backgroundColor: colors.surface2,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: colors.bg2, marginBottom: 10,
-  },
-  avatarText: { color: colors.text, fontFamily: fonts.display, fontSize: 20 },
-  name: { color: colors.text, fontFamily: fonts.display, fontSize: 18 },
+  avatarWrap: { marginBottom: 10 },
+  name: { color: colors.text, fontFamily: fonts.displayBold, fontSize: 20 },
   cat: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 12, marginTop: 2 },
-  link: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 10, marginTop: 6 },
+  link: { color: colors.cyan, fontFamily: fonts.mono, fontSize: 11, marginTop: 6 },
   statsRow: {
     flexDirection: 'row', justifyContent: 'center', gap: 22, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: colors.borderSoft, marginBottom: 14,
   },
   stat: { alignItems: 'center' },
-  statN: { color: colors.text, fontFamily: fonts.display, fontSize: 16 },
+  statN: { color: colors.text, fontFamily: fonts.monoBold, fontSize: 16 },
   statL: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 10 },
   bio: { color: colors.textDim, fontFamily: fonts.body, fontSize: 12, lineHeight: 18, textAlign: 'center', marginBottom: 16 },
-  sectionLabel: { color: colors.textFaint, fontFamily: fonts.bodyBold, fontSize: 12, marginBottom: 10 },
+  sectionLabel,
   perkRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.borderSoft, borderRadius: 14, padding: 12, marginBottom: 8,

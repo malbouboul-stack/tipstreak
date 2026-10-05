@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Share, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fonts } from '../theme';
+import { colors, fonts, sectionLabel } from '../theme';
 import GradientButton from '../components/GradientButton';
 import SupportWall from '../components/SupportWall';
 import { useWallet, shortenAddress } from '../context/WalletContext';
@@ -285,14 +285,14 @@ const styles = StyleSheet.create({
     borderRadius: 16, paddingVertical: 14, marginBottom: 10,
   },
   dashStat: { flex: 1, alignItems: 'center' },
-  dashN: { color: colors.text, fontFamily: fonts.display, fontSize: 18 },
+  dashN: { color: colors.text, fontFamily: fonts.monoBold, fontSize: 18 },
   dashL: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 10, marginTop: 2 },
   dashActions: { flexDirection: 'row', gap: 10, marginBottom: 16 },
   dashBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12,
     backgroundColor: 'rgba(153,69,255,0.1)', borderWidth: 1, borderColor: 'rgba(153,69,255,0.35)',
   },
-  sectionLabel: { color: colors.textFaint, fontFamily: fonts.bodyBold, fontSize: 12, marginBottom: 10 },
+  sectionLabel,
   handlePrefix: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 14 },
   fieldHint: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 11, marginTop: -6, marginBottom: 12, marginLeft: 4 },
   title: { color: colors.text, fontFamily: fonts.display, fontSize: 20, marginBottom: 16 },
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderSoft, borderRadius: 16, padding: 14, marginBottom: 8,
   },
   walletLabel: { color: colors.text, fontFamily: fonts.bodySemi, fontSize: 13 },
-  walletAddress: { color: colors.green, fontFamily: fonts.display, fontSize: 13, marginTop: 2 },
+  walletAddress: { color: colors.cyan, fontFamily: fonts.mono, fontSize: 13, marginTop: 2 },
   walletSub: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 11, marginTop: 2 },
   walletAction: { color: colors.purple, fontFamily: fonts.bodyBold, fontSize: 12 },
   walletError: { color: '#FF6B6B', fontFamily: fonts.body, fontSize: 11, marginBottom: 16 },
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   },
   balanceBox: { flex: 1 },
   balanceLabel: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 11 },
-  balanceValue: { color: colors.text, fontFamily: fonts.display, fontSize: 16, marginTop: 2 },
+  balanceValue: { color: colors.text, fontFamily: fonts.monoBold, fontSize: 16, marginTop: 2 },
   refreshBtn: { paddingLeft: 8 },
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

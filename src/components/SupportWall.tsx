@@ -74,5 +74,5 @@ const styles = StyleSheet.create({
   pinTag: { color: colors.gold, fontFamily: fonts.bodyBold, fontSize: 9 },
   time: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 10 },
   message: { color: colors.textDim, fontFamily: fonts.body, fontSize: 12, marginTop: 4 },
-  amount: { color: colors.green, fontFamily: fonts.display, fontSize: 13 },
+  amount: { color: colors.green, fontFamily: fonts.monoBold, fontSize: 13 },
 });

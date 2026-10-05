@@ -1,18 +1,18 @@
 {
   "expo": {
-    "name": "tipstreak",
+    "name": "TipStreak",
     "slug": "tipstreak",
     "scheme": "tipstreak",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#08070E",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -23,7 +23,18 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-localization", "expo-sqlite"],
+    "plugins": [
+      "expo-localization",
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#08070E",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 140
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "4b65e663-4ff2-48a6-b593-1200f8f7e826"

@@ -26,6 +26,18 @@ export const fr = {
   'discover.new': 'Nouveaux sur TipStreak',
   'discover.supportersLower': 'supporters',
   'discover.loadError': 'Impossible de charger les données. Vérifie ta connexion.',
+  'discover.weekTitle': 'Ta semaine de soutien',
+  'discover.streakActive': 'Série en cours : {count} sem.',
+  'discover.streakStart': 'Envoie un tip cette semaine pour lancer ta série',
+  'discover.connectHint': 'Connecte ton wallet pour suivre ta série',
+  'discover.statCreators': 'créateurs',
+  'discover.statUsdc': 'USDC envoyés',
+  'discover.statFans': 'supporters',
+  'discover.noResults': 'Aucun créateur ne correspond à ta recherche.',
+  'discover.weekdays': 'L,M,M,J,V,S,D',
+
+  // Écran de lancement
+  'launch.tagline': 'SOUTIENS · CHAQUE · SEMAINE',
 
   // Profil créateur
   'creator.notFound': 'Créateur introuvable',
@@ -188,6 +200,17 @@ export const en: Record<TranslationKey, string> = {
   'discover.new': 'New on TipStreak',
   'discover.supportersLower': 'supporters',
   'discover.loadError': 'Could not load data. Check your connection.',
+  'discover.weekTitle': 'Your support week',
+  'discover.streakActive': 'Current streak: {count} wk',
+  'discover.streakStart': 'Send a tip this week to start your streak',
+  'discover.connectHint': 'Connect your wallet to track your streak',
+  'discover.statCreators': 'creators',
+  'discover.statUsdc': 'USDC sent',
+  'discover.statFans': 'supporters',
+  'discover.noResults': 'No creator matches your search.',
+  'discover.weekdays': 'M,T,W,T,F,S,S',
+
+  'launch.tagline': 'SUPPORT · EVERY · WEEK',
 
   'creator.notFound': 'Creator not found',
   'creator.notFoundText': 'No creator matches “{handle}”.',

@@ -1,20 +1,23 @@
 import './polyfills';
 
 import 'react-native-gesture-handler';
-import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { NavigationContainer, NavigatorScreenParams } from '@react-navigation/native';
+import { DarkTheme, NavigationContainer, NavigatorScreenParams, Theme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFonts, SpaceGrotesk_600SemiBold, SpaceGrotesk_700Bold } from '@expo-google-fonts/space-grotesk';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { JetBrainsMono_500Medium, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 
 import BottomTabs, { TabParamList } from './src/navigation/BottomTabs';
 import { linking } from './src/navigation/linking';
 import CreatorProfileScreen from './src/screens/CreatorProfileScreen';
 import TipScreen from './src/screens/TipScreen';
 import { WalletProvider } from './src/context/WalletContext';
-import { DataProvider } from './src/context/DataContext';
+import { DataProvider, useData } from './src/context/DataContext';
+import LaunchScreen from './src/components/LaunchScreen';
 import { LanguageProvider } from './src/i18n/LanguageContext';
 import { colors } from './src/theme';
 
@@ -34,6 +37,20 @@ declare global {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Thème sombre de navigation : évite tout flash blanc entre deux écrans
+const navigationTheme: Theme = {
+  ...DarkTheme,
+  colors: { ...DarkTheme.colors, background: colors.bg, card: colors.bg, primary: colors.cyan, border: colors.borderSoft },
+};
+
+// Écran de lancement animé, posé au-dessus de l'app le temps que les données arrivent
+function LaunchOverlay() {
+  const { loading } = useData();
+  const [visible, setVisible] = useState(true);
+  const hide = useCallback(() => setVisible(false), []);
+  return visible ? <LaunchScreen ready={!loading} onDone={hide} /> : null;
+}
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     SpaceGrotesk_600SemiBold,
@@ -42,28 +59,32 @@ export default function App() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    JetBrainsMono_500Medium,
+    JetBrainsMono_700Bold,
   });
 
+  // Quelques millisecondes : même fond que l'écran de lancement, pour un enchaînement sans saut
   if (!fontsLoaded) {
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={colors.purple} />
-      </View>
-    );
+    return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
 
   return (
     <SafeAreaProvider>
+      {/* Icônes de la barre d'état en clair, sur le fond sombre de l'app */}
+      <StatusBar style="light" />
       <LanguageProvider>
         <WalletProvider>
           <DataProvider>
-            <NavigationContainer linking={linking}>
-              <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+            <NavigationContainer linking={linking} theme={navigationTheme}>
+              <Stack.Navigator
+                screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: 'slide_from_right' }}
+              >
                 <Stack.Screen name="Tabs" component={BottomTabs} />
                 <Stack.Screen name="CreatorProfile" component={CreatorProfileScreen} />
-                <Stack.Screen name="Tip" component={TipScreen} />
+                <Stack.Screen name="Tip" component={TipScreen} options={{ animation: 'slide_from_bottom' }} />
               </Stack.Navigator>
             </NavigationContainer>
+            <LaunchOverlay />
           </DataProvider>
         </WalletProvider>
       </LanguageProvider>

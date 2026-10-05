@@ -27,7 +27,7 @@ export default function BottomTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(21,15,34,0.96)',
+          backgroundColor: colors.bg2,
           borderTopColor: colors.borderSoft,
           borderTopWidth: 1,
           height: 56 + insets.bottom,
@@ -44,7 +44,7 @@ export default function BottomTabs() {
         component={DiscoverScreen}
         options={{
           title: t('tabs.discover'),
-          tabBarIcon: ({ focused }) => <SearchIcon size={19} color={focused ? colors.green : colors.textFaint} />,
+          tabBarIcon: ({ focused }) => <SearchIcon size={19} color={focused ? colors.cyan : colors.textFaint} />,
         }}
       />
       <Tab.Screen
@@ -52,7 +52,7 @@ export default function BottomTabs() {
         component={SupportScreen}
         options={{
           title: t('tabs.support'),
-          tabBarIcon: ({ focused }) => <HeartIcon size={19} color={focused ? colors.green : colors.textFaint} />,
+          tabBarIcon: ({ focused }) => <HeartIcon size={19} color={focused ? colors.cyan : colors.textFaint} />,
         }}
       />
       <Tab.Screen
@@ -60,7 +60,7 @@ export default function BottomTabs() {
         component={HistoryScreen}
         options={{
           title: t('tabs.history'),
-          tabBarIcon: ({ focused }) => <ClockIcon size={19} color={focused ? colors.green : colors.textFaint} />,
+          tabBarIcon: ({ focused }) => <ClockIcon size={19} color={focused ? colors.cyan : colors.textFaint} />,
         }}
       />
       <Tab.Screen
@@ -68,7 +68,7 @@ export default function BottomTabs() {
         component={CreatorSetupScreen}
         options={{
           title: t('tabs.profile'),
-          tabBarIcon: ({ focused }) => <UserIcon size={19} color={focused ? colors.green : colors.textFaint} />,
+          tabBarIcon: ({ focused }) => <UserIcon size={19} color={focused ? colors.cyan : colors.textFaint} />,
         }}
       />
     </Tab.Navigator>

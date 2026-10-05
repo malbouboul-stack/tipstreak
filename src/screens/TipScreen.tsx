@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { colors, fonts } from '../theme';
+import { colors, fonts, sectionLabel } from '../theme';
 import { ChevronLeft, BoltIcon } from '../components/Icons';
 import GradientButton from '../components/GradientButton';
+import Avatar from '../components/Avatar';
 import { useData } from '../context/DataContext';
 import { useWallet } from '../context/WalletContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -85,9 +86,7 @@ export default function TipScreen() {
           </View>
 
           <View style={styles.creatorRow}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{creator.initial}</Text>
-            </View>
+            <Avatar seed={creator.handle} initial={creator.initial} size={36} />
             <View>
               <Text style={styles.creatorName}>{creator.name}</Text>
               <Text style={styles.creatorStreak}>{t('tip.streak', { count: relation?.consecutiveWeeks ?? 0 })}</Text>
@@ -228,18 +227,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.borderSoft, borderRadius: 16, padding: 12, marginBottom: 18,
   },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: colors.text, fontFamily: fonts.display, fontSize: 12 },
   creatorName: { color: colors.text, fontFamily: fonts.bodyBold, fontSize: 13 },
   creatorStreak: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 10, marginTop: 1 },
-  sectionLabel: { color: colors.textFaint, fontFamily: fonts.bodyBold, fontSize: 12, marginBottom: 10 },
+  sectionLabel,
   chipsRow: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
   chip: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft },
   chipActive: { backgroundColor: colors.text, borderColor: colors.text },
-  chipText: { color: colors.text, fontFamily: fonts.display, fontSize: 14 },
+  chipText: { color: colors.text, fontFamily: fonts.monoBold, fontSize: 14 },
   chipTextActive: { color: colors.bg, fontFamily: fonts.displayBold },
   amountDisplay: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', paddingVertical: 14, marginBottom: 6 },
-  amountInput: { color: colors.text, fontFamily: fonts.display, fontSize: 38, minWidth: 60, textAlign: 'right' },
+  amountInput: { color: colors.text, fontFamily: fonts.monoBold, fontSize: 38, minWidth: 60, textAlign: 'right' },
   currency: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 14, marginLeft: 4 },
   boostCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(153,69,255,0.1)',
