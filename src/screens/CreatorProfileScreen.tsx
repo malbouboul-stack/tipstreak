@@ -28,7 +28,7 @@ export default function CreatorProfileScreen() {
   // Ouvert par un lien profond au démarrage : les créateurs sont encore en chargement
   if (!creator && loading) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={[styles.container, { flex: 1, alignItems: 'center', justifyContent: 'center' }]}>
           <ActivityIndicator color={colors.purple} />
         </View>
@@ -39,7 +39,7 @@ export default function CreatorProfileScreen() {
   // Lien profond avec un handle qui n'existe pas
   if (!creator) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={[styles.container, { flex: 1, alignItems: 'center', justifyContent: 'center' }]}>
           <Text style={[styles.name, { marginBottom: 8 }]}>{t('creator.notFound')}</Text>
           <Text style={[styles.bio, { marginBottom: 20 }]}>
@@ -86,7 +86,7 @@ export default function CreatorProfileScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.topNav}>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()}>

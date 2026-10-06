@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
+import { AppState } from 'react-native';
 import { Buffer } from 'buffer';
+import { fetchWithRetry } from '../lib/network';
 import { transact, Web3MobileWallet } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
 import { Connection, PublicKey, LAMPORTS_PER_SOL, Transaction, TransactionInstruction, clusterApiUrl } from '@solana/web3.js';
 import {
@@ -15,24 +17,11 @@ const USDC_DECIMALS = 6;
 // Programme Memo : le message du fan est signé dans la transaction, l'Edge Function
 // record-tip le relit on-chain (impossible de l'attacher après coup à un tip qui n'est pas le sien)
 const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
-// Relais du RPC via Supabase (Edge Function solana-rpc), pour les téléphones qui n'arrivent pas
-// à résoudre api.devnet.solana.com alors qu'ils joignent Supabase.
+// Relais du RPC via Supabase (Edge Function solana-rpc), pour les réseaux qui n'arrivent pas
+// à résoudre api.devnet.solana.com. En cas d'erreur réseau, chaque requête alterne entre le RPC
+// direct et le relais, avec quelques nouvelles tentatives (cf. src/lib/network.ts).
 const RPC_RELAY_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/solana-rpc`;
-let useRelay = false; // une fois le direct en échec, on reste sur le relais pour la session
-
-// On tente le RPC direct ; en cas d'erreur réseau (DNS, hors ligne…), on rejoue la même requête
-// via le relais. Les erreurs HTTP (429, 500…) ne déclenchent pas le relais : le RPC a bien répondu.
-const fetchWithRelay: typeof fetch = async (input, init) => {
-  if (!useRelay) {
-    try {
-      return await fetch(input, init);
-    } catch (e) {
-      console.warn('RPC Solana direct injoignable, passage par le relais Supabase', e);
-      useRelay = true;
-    }
-  }
-  return fetch(RPC_RELAY_URL, init);
-};
+const fetchWithRelay: typeof fetch = (input, init) => fetchWithRetry(input, init, RPC_RELAY_URL);
 
 const connection = new Connection(clusterApiUrl('devnet'), { commitment: 'confirmed', fetch: fetchWithRelay });
 
@@ -91,38 +80,45 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [usdcBalance, setUsdcBalance] = useState<number | null>(null);
   const [refreshingBalances, setRefreshingBalances] = useState(false);
 
-  const refreshBalances = async (address?: string) => {
-    const target = address ?? publicKey;
-    if (!target) return;
-    setRefreshingBalances(true);
-    try {
+  // SOL et USDC sont chargés séparément : si l'un échoue, l'autre s'affiche quand même.
+  // En cas d'échec, on garde l'ancienne valeur plutôt que de l'effacer.
+  const refreshBalances = useCallback(
+    async (address?: string) => {
+      const target = address ?? publicKey;
+      if (!target) return;
+      setRefreshingBalances(true);
       const owner = new PublicKey(target);
-
-      const lamports = await connection.getBalance(owner);
-      setSolBalance(lamports / LAMPORTS_PER_SOL);
-
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(owner, {
-        mint: DEVNET_USDC_MINT,
-      });
-      if (tokenAccounts.value.length > 0) {
-        const amount = tokenAccounts.value[0].account.data.parsed.info.tokenAmount.uiAmount;
-        setUsdcBalance(amount ?? 0);
-      } else {
-        setUsdcBalance(0);
+      const [sol, usdc] = await Promise.allSettled([
+        connection.getBalance(owner),
+        connection.getParsedTokenAccountsByOwner(owner, { mint: DEVNET_USDC_MINT }),
+      ]);
+      if (sol.status === 'fulfilled') setSolBalance(sol.value / LAMPORTS_PER_SOL);
+      if (usdc.status === 'fulfilled') {
+        const account = usdc.value.value[0];
+        setUsdcBalance(account ? (account.account.data.parsed.info.tokenAmount.uiAmount ?? 0) : 0);
       }
-    } catch (e) {
-      console.error('Balance fetch error', e);
-      // On laisse les anciennes valeurs plutôt que de les effacer sur une erreur réseau ponctuelle
-    } finally {
+      if (sol.status === 'rejected' || usdc.status === 'rejected') {
+        console.warn('Solde partiellement indisponible (réseau)', sol.status, usdc.status);
+      }
       setRefreshingBalances(false);
-    }
-  };
+    },
+    [publicKey]
+  );
+
+  // Soldes rechargés à chaque retour dans l'app (après Phantom, après une mise en veille…)
+  useEffect(() => {
+    if (!publicKey) return;
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshBalances(publicKey);
+    });
+    return () => subscription.remove();
+  }, [publicKey, refreshBalances]);
 
   const connect = async () => {
     setConnecting(true);
     setError(null);
     try {
-      await transact(async (wallet: Web3MobileWallet) => {
+      const address = await transact(async (wallet: Web3MobileWallet) => {
         const authResult = await wallet.authorize({
           cluster: 'devnet',
           identity: {
@@ -131,11 +127,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             icon: 'favicon.ico',
           },
         });
-        const rawAddress = authResult.accounts[0].address;
-        const address = new PublicKey(Buffer.from(rawAddress, 'base64')).toBase58();
-        setPublicKey(address);
-        await refreshBalances(address);
+        return new PublicKey(Buffer.from(authResult.accounts[0].address, 'base64')).toBase58();
       });
+      setPublicKey(address);
+      // Une fois revenu dans l'app (Phantom fermé) : le réseau est alors pleinement disponible
+      await refreshBalances(address);
     } catch (e: any) {
       console.error('Wallet connect error', e);
       setError(e?.message?.includes('No wallet') ? 'error.noWalletApp' : 'error.connectFailed');

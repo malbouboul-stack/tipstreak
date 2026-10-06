@@ -38,7 +38,7 @@ export default function TipScreen() {
 
   if (!publicKey) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
           <Text style={[styles.title, { marginBottom: 10 }]}>{t('tip.connectTitle')}</Text>
           <Text style={{ color: colors.textDim, fontFamily: fonts.body, fontSize: 13, textAlign: 'center', marginBottom: 24 }}>
@@ -74,7 +74,7 @@ export default function TipScreen() {
         : null;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <View style={styles.container}>
           <View style={styles.topNav}>
