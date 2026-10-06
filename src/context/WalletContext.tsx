@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { Buffer } from 'buffer';
 import { fetchWithRetry } from '../lib/network';
@@ -24,6 +24,9 @@ const RPC_RELAY_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/sola
 const fetchWithRelay: typeof fetch = (input, init) => fetchWithRetry(input, init, RPC_RELAY_URL);
 
 const connection = new Connection(clusterApiUrl('devnet'), { commitment: 'confirmed', fetch: fetchWithRelay });
+
+// Identité présentée à Phantom lors de la demande d'autorisation
+const APP_IDENTITY = { name: 'TipStreak', uri: 'https://tipstreak.app', icon: 'favicon.ico' };
 
 // Attend que la transaction soit confirmée. Sans ça, le solde affiché et l'Edge Function
 // record-tip peuvent encore voir l'état d'avant l'envoi.
@@ -114,21 +117,94 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, [publicKey, refreshBalances]);
 
+  // Autorisation Phantom mémorisée pour la session : les tips suivants ne redemandent pas "Connecter"
+  const authTokenRef = useRef<string | null>(null);
+
+  // (Ré)autorise l'app dans une session wallet ouverte. Si l'autorisation mémorisée n'est plus
+  // valable (révoquée dans Phantom…), on redemande une autorisation normale.
+  const authorize = async (wallet: Web3MobileWallet): Promise<string> => {
+    let result;
+    try {
+      result = await wallet.authorize({
+        chain: 'solana:devnet',
+        identity: APP_IDENTITY,
+        auth_token: authTokenRef.current ?? undefined,
+      });
+    } catch (e) {
+      if (!authTokenRef.current) throw e;
+      authTokenRef.current = null;
+      result = await wallet.authorize({ chain: 'solana:devnet', identity: APP_IDENTITY });
+    }
+    authTokenRef.current = result.auth_token;
+    return new PublicKey(Buffer.from(result.accounts[0].address, 'base64')).toBase58();
+  };
+
+  // Prépare un transfert SPL AVANT d'ouvrir le wallet : toutes les requêtes réseau sont faites ici.
+  // Une fois Phantom ouvert, l'app passe en arrière-plan : si elle devait encore attendre le réseau,
+  // Phantom fermerait la session ("Cannot send in CLOSED").
+  const buildTransfer = async (params: {
+    mint: PublicKey;
+    decimals: number;
+    recipient: PublicKey;
+    amount: number;
+    memo?: string;
+  }): Promise<Transaction> => {
+    if (!publicKey) throw new Error('error.walletNotConnected');
+    const sender = new PublicKey(publicKey);
+    const senderAta = await getAssociatedTokenAddress(params.mint, sender);
+    const recipientAta = await getAssociatedTokenAddress(params.mint, params.recipient);
+
+    const [recipientAtaInfo, latestBlockhash] = await Promise.all([
+      connection.getAccountInfo(recipientAta),
+      connection.getLatestBlockhash(),
+    ]);
+
+    const instructions: TransactionInstruction[] = [];
+    // Si le destinataire n'a jamais reçu ce jeton, son "compte token" n'existe pas encore :
+    // on le crée dans la même transaction (le fan paie ces quelques centimes de frais).
+    if (!recipientAtaInfo) {
+      instructions.push(createAssociatedTokenAccountInstruction(sender, recipientAta, params.recipient, params.mint));
+    }
+    instructions.push(
+      createTransferCheckedInstruction(
+        senderAta,
+        params.mint,
+        recipientAta,
+        sender,
+        Math.round(params.amount * 10 ** params.decimals),
+        params.decimals
+      )
+    );
+    const memo = params.memo?.trim();
+    if (memo) {
+      instructions.push(new TransactionInstruction({ programId: MEMO_PROGRAM_ID, keys: [], data: Buffer.from(memo, 'utf-8') }));
+    }
+
+    return new Transaction({
+      feePayer: sender,
+      blockhash: latestBlockhash.blockhash,
+      lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+    }).add(...instructions);
+  };
+
+  // Ouvre Phantom uniquement pour signer et envoyer une transaction déjà prête, puis attend
+  // sa confirmation (une fois revenu dans l'app).
+  const signAndSend = async (transaction: Transaction): Promise<string> => {
+    const signature = await transact(async (wallet: Web3MobileWallet) => {
+      const address = await authorize(wallet);
+      if (address !== publicKey) throw new Error('error.walletChanged');
+      const [sig] = await wallet.signAndSendTransactions({ transactions: [transaction] });
+      return sig;
+    });
+    await waitForConfirmation(signature);
+    return signature;
+  };
+
   const connect = async () => {
     setConnecting(true);
     setError(null);
     try {
-      const address = await transact(async (wallet: Web3MobileWallet) => {
-        const authResult = await wallet.authorize({
-          cluster: 'devnet',
-          identity: {
-            name: 'TipStreak',
-            uri: 'https://tipstreak.app',
-            icon: 'favicon.ico',
-          },
-        });
-        return new PublicKey(Buffer.from(authResult.accounts[0].address, 'base64')).toBase58();
-      });
+      const address = await transact((wallet: Web3MobileWallet) => authorize(wallet));
       setPublicKey(address);
       // Une fois revenu dans l'app (Phantom fermé) : le réseau est alors pleinement disponible
       await refreshBalances(address);
@@ -141,157 +217,43 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const sendTip = async (recipientAddress: string, amountUsdc: number, message?: string): Promise<string> => {
-    if (!publicKey) throw new Error('error.walletNotConnected');
-
-    let signature = '';
-
-    await transact(async (wallet: Web3MobileWallet) => {
-      const authResult = await wallet.authorize({
-        cluster: 'devnet',
-        identity: {
-          name: 'TipStreak',
-          uri: 'https://tipstreak.app',
-          icon: 'favicon.ico',
-        },
-      });
-
-      const senderPubkey = new PublicKey(Buffer.from(authResult.accounts[0].address, 'base64'));
-      const recipientPubkey = new PublicKey(recipientAddress);
-
-      const senderAta = await getAssociatedTokenAddress(DEVNET_USDC_MINT, senderPubkey);
-      const recipientAta = await getAssociatedTokenAddress(DEVNET_USDC_MINT, recipientPubkey);
-
-      const instructions = [];
-
-      // Si le créateur n'a jamais reçu d'USDC, son "compte token" n'existe pas encore
-      // sur la chaîne : on doit le créer dans la même transaction (le fan paie ces
-      // quelques centimes de frais de réseau, comme pour un vrai virement).
-      const recipientAtaInfo = await connection.getAccountInfo(recipientAta);
-      if (!recipientAtaInfo) {
-        instructions.push(
-          createAssociatedTokenAccountInstruction(senderPubkey, recipientAta, recipientPubkey, DEVNET_USDC_MINT)
-        );
-      }
-
-      instructions.push(
-        createTransferCheckedInstruction(
-          senderAta,
-          DEVNET_USDC_MINT,
-          recipientAta,
-          senderPubkey,
-          Math.round(amountUsdc * 10 ** USDC_DECIMALS),
-          USDC_DECIMALS
-        )
-      );
-
-      const memo = message?.trim();
-      if (memo) {
-        instructions.push(
-          new TransactionInstruction({ programId: MEMO_PROGRAM_ID, keys: [], data: Buffer.from(memo, 'utf-8') })
-        );
-      }
-
-      const latestBlockhash = await connection.getLatestBlockhash();
-      const transaction = new Transaction({
-        feePayer: senderPubkey,
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      }).add(...instructions);
-
-      const signatures = await wallet.signAndSendTransactions({ transactions: [transaction] });
-      signature = signatures[0];
+    const transaction = await buildTransfer({
+      mint: DEVNET_USDC_MINT,
+      decimals: USDC_DECIMALS,
+      recipient: new PublicKey(recipientAddress),
+      amount: amountUsdc,
+      memo: message,
     });
-
-    await waitForConfirmation(signature);
-    return signature;
+    return signAndSend(transaction);
   };
 
   const sendBoost = async (amountSkr: number): Promise<string> => {
-    if (!publicKey) throw new Error('error.walletNotConnected');
-
-    let signature = '';
-    const skrMint = new PublicKey(SKR_MINT_ADDRESS);
-
-    await transact(async (wallet: Web3MobileWallet) => {
-      const authResult = await wallet.authorize({
-        cluster: 'devnet',
-        identity: {
-          name: 'TipStreak',
-          uri: 'https://tipstreak.app',
-          icon: 'favicon.ico',
-        },
-      });
-
-      const senderPubkey = new PublicKey(Buffer.from(authResult.accounts[0].address, 'base64'));
-      const platformPubkey = new PublicKey(PLATFORM_WALLET_ADDRESS);
-
-      const senderAta = await getAssociatedTokenAddress(skrMint, senderPubkey);
-      const platformAta = await getAssociatedTokenAddress(skrMint, platformPubkey);
-
-      const instructions = [];
-
-      const platformAtaInfo = await connection.getAccountInfo(platformAta);
-      if (!platformAtaInfo) {
-        instructions.push(
-          createAssociatedTokenAccountInstruction(senderPubkey, platformAta, platformPubkey, skrMint)
-        );
-      }
-
-      instructions.push(
-        createTransferCheckedInstruction(
-          senderAta,
-          skrMint,
-          platformAta,
-          senderPubkey,
-          Math.round(amountSkr * 10 ** SKR_DECIMALS),
-          SKR_DECIMALS
-        )
-      );
-
-      const latestBlockhash = await connection.getLatestBlockhash();
-      const transaction = new Transaction({
-        feePayer: senderPubkey,
-        blockhash: latestBlockhash.blockhash,
-        lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-      }).add(...instructions);
-
-      const signatures = await wallet.signAndSendTransactions({ transactions: [transaction] });
-      signature = signatures[0];
+    const transaction = await buildTransfer({
+      mint: new PublicKey(SKR_MINT_ADDRESS),
+      decimals: SKR_DECIMALS,
+      recipient: new PublicKey(PLATFORM_WALLET_ADDRESS),
+      amount: amountSkr,
     });
-
-    await waitForConfirmation(signature);
-    return signature;
+    return signAndSend(transaction);
   };
 
   // Signature d'un simple message (gratuit, aucune transaction) : prouve qu'on possède le wallet.
   // Renvoie la charge signée telle que le wallet la fournit ; le serveur en extrait la signature.
   const signMessage = async (message: string): Promise<Uint8Array> => {
     if (!publicKey) throw new Error('error.walletNotConnected');
+    const payload = Buffer.from(message, 'utf-8');
+    const addressBase64 = Buffer.from(new PublicKey(publicKey).toBytes()).toString('base64');
 
     return transact(async (wallet: Web3MobileWallet) => {
-      const authResult = await wallet.authorize({
-        cluster: 'devnet',
-        identity: {
-          name: 'TipStreak',
-          uri: 'https://tipstreak.app',
-          icon: 'favicon.ico',
-        },
-      });
-
-      const account = authResult.accounts[0];
-      if (new PublicKey(Buffer.from(account.address, 'base64')).toBase58() !== publicKey) {
-        throw new Error('error.walletChanged');
-      }
-
-      const [signedPayload] = await wallet.signMessages({
-        addresses: [account.address],
-        payloads: [Buffer.from(message, 'utf-8')],
-      });
+      const address = await authorize(wallet);
+      if (address !== publicKey) throw new Error('error.walletChanged');
+      const [signedPayload] = await wallet.signMessages({ addresses: [addressBase64], payloads: [payload] });
       return signedPayload;
     });
   };
 
   const disconnect = () => {
+    authTokenRef.current = null;
     setPublicKey(null);
     setSolBalance(null);
     setUsdcBalance(null);
