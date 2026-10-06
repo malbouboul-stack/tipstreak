@@ -3,8 +3,8 @@
 // Certains téléphones n'arrivent pas à résoudre api.devnet.solana.com (DNS de la box, DNS privé,
 // bloqueur de pub…) alors qu'ils joignent très bien Supabase. L'app essaie d'abord le RPC direct,
 // et ne passe par ce relais qu'en cas d'échec réseau.
-// Seules les méthodes de lecture utilisées par l'app sont relayées : pas d'envoi de transaction
-// (c'est le wallet qui les envoie lui-même).
+// Seules les méthodes utilisées par l'app sont relayées : des lectures, et l'envoi d'une
+// transaction déjà signée par le wallet (le relais ne peut rien signer lui-même).
 
 const RPC_URL = Deno.env.get('SOLANA_RPC_URL') ?? 'https://api.devnet.solana.com';
 
@@ -16,6 +16,7 @@ const ALLOWED_METHODS = new Set([
   'getSignatureStatuses',
   'getTokenAccountBalance',
   'getMinimumBalanceForRentExemption',
+  'sendTransaction',
 ]);
 
 const json = (status: number, body: unknown) => Response.json(body, { status });

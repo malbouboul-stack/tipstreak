@@ -187,15 +187,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }).add(...instructions);
   };
 
-  // Ouvre Phantom uniquement pour signer et envoyer une transaction déjà prête, puis attend
-  // sa confirmation (une fois revenu dans l'app).
+  // Phantom ne fait que SIGNER la transaction déjà prête ; c'est l'app qui l'envoie ensuite.
+  // Si Phantom l'envoyait lui-même, il dépendrait de son propre accès réseau : quand il échoue,
+  // Phantom reste bloqué sans revenir à l'app. L'app, elle, a ses nouvelles tentatives et son relais.
   const signAndSend = async (transaction: Transaction): Promise<string> => {
-    const signature = await transact(async (wallet: Web3MobileWallet) => {
+    const signed = await transact(async (wallet: Web3MobileWallet) => {
       const address = await authorize(wallet);
       if (address !== publicKey) throw new Error('error.walletChanged');
-      const [sig] = await wallet.signAndSendTransactions({ transactions: [transaction] });
-      return sig;
+      const [signedTransaction] = await wallet.signTransactions({ transactions: [transaction] });
+      return signedTransaction;
     });
+    // Renvoyer une transaction déjà signée est sans risque : Solana la reconnaît (même signature)
+    const signature = await connection.sendRawTransaction(signed.serialize(), { maxRetries: 5 });
     await waitForConfirmation(signature);
     return signature;
   };
