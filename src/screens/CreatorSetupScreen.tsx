@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, fonts, sectionLabel } from '../theme';
 import GradientButton from '../components/GradientButton';
 import SupportWall from '../components/SupportWall';
+import LanguagePicker from '../components/LanguagePicker';
 import { useWallet, shortenAddress } from '../context/WalletContext';
 import { getCreatorLink, useData } from '../context/DataContext';
 import { useCreatorTips } from '../data/useCreatorTips';
@@ -18,7 +19,7 @@ export default function CreatorSetupScreen() {
   const { publicKey, connecting, error, solBalance, usdcBalance, refreshingBalances, connect, disconnect, refreshBalances } = useWallet();
   const { myCreator, publishCreator, refresh } = useData();
   const { tips: receivedTips, loading: tipsLoading, reload: reloadTips, fetchedAt } = useCreatorTips(myCreator?.id);
-  const { t, translateError, language, setLanguage } = useLanguage();
+  const { t, translateError } = useLanguage();
   const [isCreator, setIsCreator] = useState(false);
   const [handle, setHandle] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -79,19 +80,7 @@ export default function CreatorSetupScreen() {
           <Text style={[styles.title, { marginBottom: 0 }]}>
             {myCreator ? t('profile.titleCreator') : t('profile.titleNew')}
           </Text>
-          <View style={styles.langToggle} accessibilityRole="radiogroup" accessibilityLabel={t('profile.language')}>
-            {(['fr', 'en'] as const).map((lang) => (
-              <TouchableOpacity
-                key={lang}
-                style={[styles.langOption, language === lang && styles.langOptionActive]}
-                onPress={() => setLanguage(lang)}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: language === lang }}
-              >
-                <Text style={[styles.langText, language === lang && styles.langTextActive]}>{lang.toUpperCase()}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <LanguagePicker />
         </View>
 
         <View style={styles.walletCard}>
@@ -270,14 +259,6 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: 20 },
   handleField: { flexDirection: 'row', alignItems: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  langToggle: {
-    flexDirection: 'row', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSoft,
-    borderRadius: 10, padding: 2,
-  },
-  langOption: { paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8 },
-  langOptionActive: { backgroundColor: colors.purple },
-  langText: { color: colors.textFaint, fontFamily: fonts.bodyBold, fontSize: 11 },
-  langTextActive: { color: colors.text },
   dashboard: { marginBottom: 8 },
   dashTitle: { color: colors.textDim, fontFamily: fonts.bodySemi, fontSize: 12, marginBottom: 10 },
   dashStats: {

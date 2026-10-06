@@ -8,6 +8,7 @@ import { SearchIcon } from '../components/Icons';
 import TierBadge from '../components/TierBadge';
 import Avatar from '../components/Avatar';
 import StreakMark from '../components/StreakMark';
+import LanguagePicker from '../components/LanguagePicker';
 import { Creator, useData } from '../context/DataContext';
 import { useWallet } from '../context/WalletContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -191,6 +192,9 @@ export default function DiscoverScreen() {
           <Text style={styles.brand}>
             Tip<Text style={{ color: colors.cyan }}>Streak</Text>
           </Text>
+          <View style={{ marginLeft: 'auto', alignSelf: 'center' }}>
+            <LanguagePicker />
+          </View>
         </View>
 
         <WeekCard />
