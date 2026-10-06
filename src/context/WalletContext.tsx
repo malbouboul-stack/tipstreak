@@ -15,7 +15,26 @@ const USDC_DECIMALS = 6;
 // Programme Memo : le message du fan est signé dans la transaction, l'Edge Function
 // record-tip le relit on-chain (impossible de l'attacher après coup à un tip qui n'est pas le sien)
 const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
-const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+// Relais du RPC via Supabase (Edge Function solana-rpc), pour les téléphones qui n'arrivent pas
+// à résoudre api.devnet.solana.com alors qu'ils joignent Supabase.
+const RPC_RELAY_URL = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/solana-rpc`;
+let useRelay = false; // une fois le direct en échec, on reste sur le relais pour la session
+
+// On tente le RPC direct ; en cas d'erreur réseau (DNS, hors ligne…), on rejoue la même requête
+// via le relais. Les erreurs HTTP (429, 500…) ne déclenchent pas le relais : le RPC a bien répondu.
+const fetchWithRelay: typeof fetch = async (input, init) => {
+  if (!useRelay) {
+    try {
+      return await fetch(input, init);
+    } catch (e) {
+      console.warn('RPC Solana direct injoignable, passage par le relais Supabase', e);
+      useRelay = true;
+    }
+  }
+  return fetch(RPC_RELAY_URL, init);
+};
+
+const connection = new Connection(clusterApiUrl('devnet'), { commitment: 'confirmed', fetch: fetchWithRelay });
 
 // Attend que la transaction soit confirmée. Sans ça, le solde affiché et l'Edge Function
 // record-tip peuvent encore voir l'état d'avant l'envoi.
