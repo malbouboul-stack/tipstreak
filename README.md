@@ -9,6 +9,9 @@ music, dev, art, gaming, crypto… Fans send tips in USDC with no middleman, and
 weekly badges. Creators publish their page by signing with their wallet and receive tips directly on it.
 
 > Built for the Solana Mobile hackathon. Runs on **Solana devnet**.
+>
+> 📲 **Download the Android APK:** [TipStreak (preview) on EAS](https://expo.dev/accounts/ibmd/projects/tipstreak/builds/29220317-9c40-4b8f-ac23-c8cdc058a9ee)
+> · 🎬 First real tip, verified on-chain: [view on Solana Explorer](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet)
 
 ## Features
 
@@ -25,6 +28,12 @@ weekly badges. Creators publish their page by signing with their wallet and rece
 - **Creator space**: supporters, USDC received (this week / all time), latest tips and fan messages.
 - **Public link** `tipstreak://<handle>` that opens the creator's page directly in the app.
 - Tips land **directly in the creator's wallet**: TipStreak never holds funds.
+
+**Look & feel**
+- A visual identity mixing the Solana world (purple, green) and the Solana Mobile / Seeker world (cyan, monospace type).
+- The logo: **7 rising bars, one per day of the week, and a gold coin — the tip — on the tallest one**.
+  The same motif fills the "Your support week" card as you tip.
+- Animated launch screen, per-creator gradient avatars, English / French interface.
 
 ## How trust is guaranteed
 
@@ -47,12 +56,20 @@ Result: fake tips, inflated streaks and creator impersonation are impossible.
 │ Discover / Profile / │ ──────────► │ creators, tips      │          │ USDC (SPL)     │
 │ Support / History    │             │ creator_stats view  │          │ SKR (SPL)      │
 │                      │             │ (RLS: read-only)    │          │ Memo           │
-│ Mobile Wallet Adapter│ ─── tx ────────────────────────────────────► │                │
+│ Mobile Wallet Adapter│ ── signed tx ──────────────────────────────► │                │
 │ (Phantom, Solflare…) │             │ Edge Functions:     │ re-reads │                │
 │                      │ ──────────► │  record-tip  ───────────────────►│                │
-│                      │             │  register-creator   │          └────────────────┘
-└──────────────────────┘             └─────────────────────┘
+│                      │             │  register-creator   │          │                │
+│                      │  fallback   │  solana-rpc (relay) ───────────►│                │
+└──────────────────────┘             └─────────────────────┘          └────────────────┘
 ```
+
+**Built for real phones and real networks**
+- The transaction is fully prepared **before** the wallet opens; the wallet only **signs** it, then the app sends it.
+  The wallet session stays short (no "session closed" errors) and the wallet never depends on its own network access.
+- The wallet authorization is remembered for the session: no "Connect" prompt on every tip.
+- Network calls retry automatically, and Solana requests fall back to a Supabase relay (`solana-rpc`)
+  when the phone cannot reach the public RPC (flaky DNS on some home Wi-Fi networks).
 
 **Stack**: Expo SDK 57 · React Native 0.86 · TypeScript · React Navigation · `@solana/web3.js` + `@solana/spl-token`
 · Solana Mobile Wallet Adapter · Supabase (Postgres, RLS, Deno Edge Functions) · EAS Build.
@@ -63,24 +80,30 @@ src/
   context/DataContext.tsx     Supabase data, tip recording, creator publishing
   data/streaks.ts             streak and tier computation (Monday-to-Sunday weeks)
   data/useCreatorTips.ts      tips received by a creator
+  lib/network.ts              network retries + RPC relay fallback
+  i18n/                       English / French texts
+  components/                 logo (StreakMark), launch screen, avatars, support wall, language picker
   navigation/linking.ts       tipstreak:// deep links
   screens/                    Discover, Creator profile, Tip, Support, History, Creator space
 supabase/
   migrations/                 schema (tables, RLS, stats view)
   functions/record-tip/       on-chain tip verification
   functions/register-creator/ creator signature verification
+  functions/solana-rpc/       read-only RPC relay (+ sending already-signed transactions)
   seed.sql                    demo creators
 ```
 
 ## Try the app
 
-1. Install the **TipStreak (preview)** APK (EAS build link) on an Android phone.
-2. Install **Phantom** or **Solflare** and switch the wallet to **devnet**.
-3. Get devnet SOL (transaction fees) and devnet USDC (Circle faucet).
-4. **Profile** tab → connect your wallet. **Discover** tab → pick a creator → **Send a tip**.
-5. To receive tips: **Profile** → *Receive tips* → choose a handle → **Publish my page** → sign.
+1. Install the **TipStreak (preview)** APK on an Android phone:
+   [EAS build page](https://expo.dev/accounts/ibmd/projects/tipstreak/builds/29220317-9c40-4b8f-ac23-c8cdc058a9ee).
+2. Install **Phantom** and turn on **Testnet mode** (Settings → Developer settings), network **Solana Devnet**.
+3. Get devnet SOL ([faucet.solana.com](https://faucet.solana.com)) and devnet USDC ([faucet.circle.com](https://faucet.circle.com), *Solana Devnet*).
+4. **Profile** tab → connect your wallet. **Discover** tab → pick a creator → **Send a tip** → sign in Phantom.
+5. To receive tips: **Profile** → *Receive tips* → choose a handle → **Publish my page** → sign (free).
 
-> The app follows the phone's language (English or French); switch it anytime with the **FR / EN** toggle in the Profile tab.
+> The app follows the phone's language (English or French); switch it anytime with the **🌐 FR ▾** button
+> at the top of Discover and Profile.
 
 ## Development
 
@@ -92,7 +115,7 @@ npm install
 
 **Supabase** (once):
 1. SQL Editor: run `supabase/migrations/20260929000000_init.sql`, then `supabase/seed.sql`.
-2. Edge Functions: deploy `record-tip` and `register-creator` (code in `supabase/functions/`),
+2. Edge Functions: deploy `record-tip`, `register-creator` and `solana-rpc` (code in `supabase/functions/`),
    with *Verify JWT* turned off (they verify their own proofs).
 3. Create `.env.local` at the project root (git-ignored):
    ```
@@ -125,12 +148,13 @@ To enable boost verification, set the `TSKR_MINT` and `PLATFORM_WALLET` secrets 
 | Wallet connection, SOL / USDC balances | ✅ |
 | Supabase database, read-only from the app | ✅ |
 | Creator page publishing by signature | ✅ tested with Phantom |
-| On-chain tip verification (`record-tip`) | ✅ tested server-side |
-| Support wall, creator space, loyalty tiers | ✅ |
+| **End-to-end USDC tip** (Phantom signature → on-chain → verified → recorded) | ✅ [tested on a real phone](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet) |
+| On-chain tip verification (`record-tip`) | ✅ |
+| Support wall, creator space, loyalty tiers, weekly streaks | ✅ |
 | English / French interface, remembered choice | ✅ |
-| `tipstreak://` deep links | ✅ implemented, to validate on the preview build |
-| End-to-end USDC tip | ⏳ waiting for devnet SOL (faucets rate-limited) |
-| SKR boost | ⏳ waiting for the TSKR test token |
+| Animated launch screen, new identity and app icon | ✅ |
+| `tipstreak://` deep links | ✅ implemented |
+| SKR boost | 🛠️ implemented (app + on-chain verification), not yet tested: needs the TSKR devnet test token |
 
 ## Roadmap
 
