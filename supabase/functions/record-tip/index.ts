@@ -5,7 +5,8 @@
 //   - elle a réussi et verse bien des USDC au wallet du créateur ;
 //   - le fan est le signataire dont le solde USDC a baissé du même montant ;
 //   - montant, date (heure du bloc) et message (memo) viennent de la chaîne, jamais de l'app ;
-//   - boost : la même transaction verse aussi au moins 5 TSKR au créateur, payés par le même fan.
+//   - boost : la même transaction verse aussi au moins 5 TSKR au créateur, payés par le même fan ;
+//   - contribution volontaire : USDC versés en plus à TipStreak dans la même transaction.
 // La signature est la clé primaire : un même tip (et donc son boost) ne peut pas être compté deux fois.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -18,6 +19,8 @@ const MAX_MESSAGE_LENGTH = 280;
 const RPC_URL = Deno.env.get('SOLANA_RPC_URL') ?? 'https://api.devnet.solana.com';
 // Jeton de test devnet représentant SKR (secret de la fonction ; sans lui, aucun tip n'est boosté)
 const TSKR_MINT = Deno.env.get('TSKR_MINT');
+// Portefeuille qui reçoit les contributions volontaires des fans (cf. src/constants/platform.ts)
+const TREASURY_WALLET = Deno.env.get('TREASURY_WALLET') ?? '2pCdku1vYZAoqnEfDUZizM9C9rsUfUUfHm2LsCZ2h1JD';
 
 // Clé secrète fournie automatiquement par Supabase : contourne RLS, ne quitte jamais le serveur
 const supabase = createClient(
@@ -87,19 +90,25 @@ function balanceDeltas(tx: ParsedTransaction, mint: string): Map<string, bigint>
   return deltas;
 }
 
-// Vérifie un transfert de `mint` vers `recipient` et renvoie qui l'a payé et combien
-function verifyTransfer(tx: ParsedTransaction, mint: string, recipient: string, label: string) {
+// Vérifie un transfert de `mint` vers `recipient` et renvoie qui l'a payé et combien.
+// `extra` : destinataire secondaire facultatif payé dans la même transaction (contribution à TipStreak) ;
+// le fan doit alors avoir payé exactement la somme des deux.
+function verifyTransfer(tx: ParsedTransaction, mint: string, recipient: string, label: string, extra?: string) {
   if (!tx.meta || tx.meta.err) throw new HttpError(400, `La transaction ${label} a échoué on-chain`);
 
   const deltas = balanceDeltas(tx, mint);
   const amount = deltas.get(recipient) ?? 0n;
   if (amount <= 0n) throw new HttpError(400, `La transaction ${label} ne verse rien au bon destinataire`);
+  const extraAmount = extra && extra !== recipient ? (deltas.get(extra) ?? 0n) : 0n;
+  const paid = amount + (extraAmount > 0n ? extraAmount : 0n);
 
   const signers = new Set(tx.transaction.message.accountKeys.filter((k) => k.signer).map((k) => k.pubkey));
-  const fan = [...deltas].find(([owner, delta]) => owner !== recipient && delta === -amount && signers.has(owner))?.[0];
+  const fan = [...deltas].find(
+    ([owner, delta]) => owner !== recipient && owner !== extra && delta === -paid && signers.has(owner)
+  )?.[0];
   if (!fan) throw new HttpError(400, `Impossible d'identifier le signataire de la transaction ${label}`);
 
-  return { fan, amount };
+  return { fan, amount, extraAmount: extraAmount > 0n ? extraAmount : 0n };
 }
 
 function readMemo(tx: ParsedTransaction): string | null {
@@ -140,7 +149,13 @@ Deno.serve(async (req) => {
     if (!creator) throw new HttpError(404, 'Créateur inconnu');
 
     const tx = await fetchTransaction(signature);
-    const { fan, amount } = verifyTransfer(tx, USDC_MINT, creator.wallet_address, 'de tip');
+    const { fan, amount, extraAmount: contribution } = verifyTransfer(
+      tx,
+      USDC_MINT,
+      creator.wallet_address,
+      'de tip',
+      TREASURY_WALLET
+    );
     if (tx.blockTime == null) throw new HttpError(502, 'Heure du bloc indisponible, réessaie dans quelques secondes');
 
     // Boost : des TSKR versés au créateur dans la même transaction que le tip
@@ -162,6 +177,7 @@ Deno.serve(async (req) => {
         amount: formatUnits(amount, USDC_DECIMALS),
         boosted,
         boost_signature: boosted ? signature : null,
+        contribution: formatUnits(contribution, USDC_DECIMALS),
         message: readMemo(tx),
         created_at: new Date(tx.blockTime * 1000).toISOString(),
       })

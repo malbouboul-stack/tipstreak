@@ -62,7 +62,7 @@ export default function SupportScreen() {
               style={styles.row}
               onPress={() => navigation.navigate('CreatorProfile', { creatorId: item.creator.id })}
             >
-              <Avatar seed={item.creator.handle} initial={item.creator.initial} size={44} />
+              <Avatar seed={item.creator.handle} initial={item.creator.initial} uri={item.creator.avatarUrl} size={44} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{item.creator.name}</Text>
                 <TierBadge weeklyCount={item.relation.weeklyCount} consecutiveWeeks={item.relation.consecutiveWeeks} />

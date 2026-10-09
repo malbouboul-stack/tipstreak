@@ -21,11 +21,13 @@ et reçoivent les tips directement dessus.
 - **Tip en USDC** : montants rapides ou libres, message optionnel signé dans la transaction (programme Memo).
 - **Boost SKR** (optionnel) : ajouter 5 SKR pour le créateur afin d'épingler son tip en haut de son mur pendant 7 jours.
   Le tip USDC et le boost SKR partent dans **une seule transaction** : une seule validation dans le wallet, tout ou rien.
+- **Soutenir TipStreak** (facultatif, désactivé par défaut) : ajouter 5 % pour la plateforme. Le créateur reçoit toujours 100 % du tip.
 - **Mes soutiens** : créateurs soutenus, streak (semaines consécutives), total donné.
 - **Badges de fidélité** : 💜 Supporter (1er tip) · 🔥 Fan actif (3 tips dans la semaine) · 🏆 Légende (8 semaines d'affilée).
 - **Historique** de ses tips, groupé par jour.
 
 **Côté créateur**
+- **Photo de profil** : choisie dans la galerie, recadrée en carré et signée avec le wallet.
 - **Publier sa page** : handle, nom, catégorie, bio — prouvé par une signature du wallet (gratuite, sans transaction).
 - **Espace créateur** : supporters, USDC reçus (semaine / total), derniers tips et messages des fans.
 - **Lien public** `tipstreak://<handle>` qui ouvre directement sa page dans l'app, à partager partout.
@@ -110,17 +112,35 @@ supabase/
 
 ## Développement
 
-Prérequis : Node.js 24, un compte [Expo](https://expo.dev), un projet [Supabase](https://supabase.com), un téléphone Android.
+### Démarrage rapide (backend de démo public)
+
+Le dépôt contient un fichier `.env` qui pointe vers le backend devnet public de TipStreak : l'app se lance dès
+qu'elle est clonée, sans rien configurer sur Supabase. Prérequis : Node.js 24, le SDK Android d'Android Studio
+(ou un compte [Expo](https://expo.dev) pour compiler dans le cloud), un téléphone Android ou un émulateur, et un
+wallet (Phantom) pour envoyer des tips.
 
 ```bash
+git clone https://github.com/malbouboul-stack/tipstreak.git && cd tipstreak
 npm install
+npx expo run:android        # compile l'app avec ses modules natifs et l'installe sur l'appareil branché
 ```
 
+Pas de SDK Android ? Compiler une development build dans le cloud, l'installer sur le téléphone, puis lancer Metro :
+```bash
+npx eas-cli@latest build -p android --profile development
+npx expo start
+```
+
+> TipStreak utilise des modules natifs (Mobile Wallet Adapter, SQLite, audio…) : il lui faut une development build,
+> l'app ne tourne pas dans Expo Go.
+
+### Ton propre backend (optionnel)
+
 **Supabase** (une fois) :
-1. SQL Editor : exécuter `supabase/migrations/20260929000000_init.sql`, puis `supabase/seed.sql`.
-2. Edge Functions : déployer `record-tip`, `register-creator` et `solana-rpc` (code dans `supabase/functions/`),
+1. SQL Editor : exécuter les fichiers de `supabase/migrations/` dans l'ordre, puis `supabase/seed.sql`.
+2. Edge Functions : déployer `record-tip`, `register-creator`, `upload-avatar` et `solana-rpc` (code dans `supabase/functions/`),
    avec *Verify JWT* désactivé (elles vérifient elles-mêmes leurs preuves).
-3. Créer `.env.local` à la racine (ignoré par git) :
+3. Créer `.env.local` à la racine (ignoré par git, prioritaire sur `.env`) :
    ```
    EXPO_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...

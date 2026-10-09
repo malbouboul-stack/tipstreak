@@ -6,6 +6,8 @@ import { colors, fonts, sectionLabel } from '../theme';
 import { ChevronLeft, BoltIcon } from '../components/Icons';
 import GradientButton from '../components/GradientButton';
 import Avatar from '../components/Avatar';
+import TipSuccessModal from '../components/TipSuccessModal';
+import { CONTRIBUTION_RATE } from '../constants/platform';
 import { useData } from '../context/DataContext';
 import { useWallet } from '../context/WalletContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -31,8 +33,11 @@ export default function TipScreen() {
   // Un seul champ texte : les montants rapides le remplissent, et on peut l'effacer entièrement
   const [amountText, setAmountText] = useState('5');
   const [boosted, setBoosted] = useState(false);
+  const [contribute, setContribute] = useState(false); // facultatif, désactivé par défaut
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  // Tip confirmé : affiche l'écran de réussite animé (son + vibration)
+  const [success, setSuccess] = useState<{ amount: number; boosted: boolean; contributed: boolean } | null>(null);
 
   if (!creator) return null;
 
@@ -60,9 +65,12 @@ export default function TipScreen() {
   // Montant valide : strictement positif, 6 décimales max (précision de l'USDC)
   const parsedAmount = parseFloat(amountText.replace(',', '.'));
   const finalAmount = Number.isFinite(parsedAmount) && parsedAmount > 0 ? Math.round(parsedAmount * 1e6) / 1e6 : 0;
+  // Contribution volontaire à TipStreak, en plus du tip (le créateur reçoit toujours 100 % du tip)
+  const contributionOffer = Math.round(finalAmount * CONTRIBUTION_RATE * 100) / 100;
+  const contribution = contribute ? contributionOffer : 0;
 
   // Vérifications avant envoi : sinon le wallet renvoie une erreur peu compréhensible
-  const notEnoughUsdc = usdcBalance !== null && finalAmount > usdcBalance;
+  const notEnoughUsdc = usdcBalance !== null && finalAmount + contribution > usdcBalance;
   const noSol = solBalance !== null && solBalance < MIN_FEE_SOL;
   const lowSol = !noSol && solBalance !== null && solBalance < FIRST_TIP_SOL;
   const balanceWarning = notEnoughUsdc
@@ -86,7 +94,7 @@ export default function TipScreen() {
           </View>
 
           <View style={styles.creatorRow}>
-            <Avatar seed={creator.handle} initial={creator.initial} size={36} />
+            <Avatar seed={creator.handle} initial={creator.initial} uri={creator.avatarUrl} size={36} />
             <View>
               <Text style={styles.creatorName}>{creator.name}</Text>
               <Text style={styles.creatorStreak}>{t('tip.streak', { count: relation?.consecutiveWeeks ?? 0 })}</Text>
@@ -131,6 +139,24 @@ export default function TipScreen() {
             </View>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.contributeRow}
+            onPress={() => setContribute(!contribute)}
+            activeOpacity={0.85}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: contribute }}
+          >
+            <Text style={styles.contributeText}>
+              {t('tip.contributeTitle')}{' '}
+              <Text style={styles.contributeSub}>
+                {t('tip.contributeSub', { amount: contributionOffer.toFixed(2) })}
+              </Text>
+            </Text>
+            <View style={[styles.switch, contribute && styles.switchOnCyan]}>
+              <View style={[styles.switchDot, contribute && styles.switchDotOn]} />
+            </View>
+          </TouchableOpacity>
+
           <View style={styles.field}>
             <TextInput
               style={styles.input}
@@ -153,8 +179,12 @@ export default function TipScreen() {
             onPress={async () => {
               setSending(true);
               try {
-                // Tip et boost éventuel partent dans une seule transaction (une seule signature)
-                const tipSignature = await sendTip(creator.walletAddress, finalAmount, message, boosted ? BOOST_COST_SKR : 0);
+                // Tip, boost et contribution éventuels partent dans une seule transaction (une seule signature)
+                const tipSignature = await sendTip(creator.walletAddress, finalAmount, {
+                  message,
+                  boostSkr: boosted ? BOOST_COST_SKR : 0,
+                  contributionUsdc: contribution,
+                });
                 console.log('Tip signature:', tipSignature);
 
                 // Enregistrement en base : l'Edge Function vérifie la transaction on-chain (boost compris)
@@ -175,11 +205,7 @@ export default function TipScreen() {
                     [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
                   );
                 } else {
-                  Alert.alert(
-                    t('tip.successTitle'),
-                    t('tip.successText', { amount: finalAmount, name: creator.name }) + (boosted ? t('tip.successBoost') : ''),
-                    [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
-                  );
+                  setSuccess({ amount: finalAmount, boosted, contributed: contribution > 0 });
                 }
               } catch (e: any) {
                 console.error('Send tip error', e);
@@ -191,6 +217,17 @@ export default function TipScreen() {
           />
         </View>
       </KeyboardAvoidingView>
+      <TipSuccessModal
+        visible={success !== null}
+        amount={success?.amount ?? 0}
+        creatorName={creator.name}
+        boosted={success?.boosted ?? false}
+        contributed={success?.contributed ?? false}
+        onClose={() => {
+          setSuccess(null);
+          navigation.goBack();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -233,6 +270,13 @@ const styles = StyleSheet.create({
   boostSub: { color: colors.textDim, fontFamily: fonts.body, fontSize: 10, marginTop: 1 },
   switch: { width: 38, height: 22, borderRadius: 12, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.borderSoft, padding: 2 },
   switchOn: { backgroundColor: colors.purple, borderColor: colors.purple },
+  switchOnCyan: { backgroundColor: colors.cyan, borderColor: colors.cyan },
+  contributeRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 14, borderWidth: 1, borderColor: colors.borderSoft, marginTop: -6, marginBottom: 14,
+  },
+  contributeText: { flex: 1, color: colors.text, fontFamily: fonts.bodySemi, fontSize: 12 },
+  contributeSub: { color: colors.textDim, fontFamily: fonts.body, fontSize: 11 },
   switchDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.textFaint, alignSelf: 'flex-start' },
   switchDotOn: { backgroundColor: colors.bg, alignSelf: 'flex-end' },
   field: {

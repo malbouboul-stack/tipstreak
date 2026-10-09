@@ -112,7 +112,7 @@ export default function CreatorProfileScreen() {
 
         <View style={styles.head}>
           <View style={styles.avatarWrap}>
-            <Avatar seed={creator.handle} initial={creator.initial} size={72} ring />
+            <Avatar seed={creator.handle} initial={creator.initial} uri={creator.avatarUrl} size={72} ring />
           </View>
           <Text style={styles.name}>{creator.name}</Text>
           <Text style={styles.cat}>{creator.category}</Text>

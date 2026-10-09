@@ -158,7 +158,7 @@ export default function DiscoverScreen() {
           activeOpacity={0.8}
           onPress={() => navigation.navigate('CreatorProfile', { creatorId: creator.id })}
         >
-          <Avatar seed={creator.handle} initial={creator.initial} size={46} />
+          <Avatar seed={creator.handle} initial={creator.initial} uri={creator.avatarUrl} size={46} />
           <View style={{ flex: 1 }}>
             <View style={styles.nameRow}>
               <Text style={styles.name} numberOfLines={1}>

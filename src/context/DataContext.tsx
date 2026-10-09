@@ -12,6 +12,7 @@ export type Creator = {
   category: string;
   bio: string;
   walletAddress: string;
+  avatarUrl: string | null; // photo de profil (Supabase Storage), sinon initiale
   supporters: number;
   totalReceived: number;
 };
@@ -39,6 +40,7 @@ type DataContextType = {
   recordTip: (params: { signature: string; creatorId: string }) => Promise<void>;
   myCreator: Creator | undefined; // page créateur du wallet connecté, s'il en a publié une
   publishCreator: (profile: CreatorProfileInput) => Promise<Creator>;
+  uploadAvatar: (jpegBase64: string) => Promise<void>; // photo JPEG 512 × 512 déjà préparée
 };
 
 export type CreatorProfileInput = { handle: string; name: string; category: string; bio: string };
@@ -55,6 +57,11 @@ function buildCreatorMessage(p: CreatorProfileInput & { wallet: string; issuedAt
     `Bio : ${p.bio}`,
     `Date : ${p.issuedAt}`,
   ].join('\n');
+}
+
+// ⚠️ Doit produire exactement le même texte que buildMessage() dans supabase/functions/upload-avatar/index.ts
+function buildAvatarMessage(wallet: string, sha256: string, issuedAt: string): string {
+  return ['TipStreak : changer ma photo de profil', `Wallet : ${wallet}`, `Image : ${sha256}`, `Date : ${issuedAt}`].join('\n');
 }
 
 // Les Edge Functions renvoient { error: "..." } : on remonte ce message lisible plutôt que le code HTTP
@@ -79,6 +86,7 @@ type CreatorRow = {
   category: string;
   bio: string;
   wallet_address: string;
+  avatar_url: string | null;
   supporters: number;
   total_received: number;
 };
@@ -101,6 +109,7 @@ function toCreator(row: CreatorRow): Creator {
     category: row.category,
     bio: row.bio,
     walletAddress: row.wallet_address,
+    avatarUrl: row.avatar_url ?? null,
     supporters: row.supporters,
     totalReceived: Number(row.total_received),
   };
@@ -203,6 +212,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [publicKey, signMessage, refresh]
   );
 
+  // La signature porte sur l'empreinte de l'image : elle ne peut pas servir pour une autre photo
+  const uploadAvatar = useCallback<DataContextType['uploadAvatar']>(
+    async (jpegBase64) => {
+      if (!publicKey) throw new Error('error.connectToPublish');
+      const issuedAt = new Date().toISOString();
+      // Module natif chargé à la demande : une development build plus ancienne démarre quand même
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Crypto = require('expo-crypto') as typeof import('expo-crypto');
+      const sha256 = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, jpegBase64, {
+        encoding: Crypto.CryptoEncoding.HEX,
+      });
+      const signedPayload = await signMessage(buildAvatarMessage(publicKey, sha256, issuedAt));
+      await invokeFunction('upload-avatar', {
+        wallet: publicKey,
+        issuedAt,
+        imageBase64: jpegBase64,
+        signedPayload: Buffer.from(signedPayload).toString('base64'),
+      });
+      await refresh();
+    },
+    [publicKey, signMessage, refresh]
+  );
+
   const value = useMemo<DataContextType>(() => {
     const byId = new Map(creators.map((c) => [c.id, c]));
     const myTips: Tip[] = tipRows.map((t) => ({
@@ -229,8 +261,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
       recordTip,
       myCreator: publicKey ? creators.find((c) => c.walletAddress === publicKey) : undefined,
       publishCreator,
+      uploadAvatar,
     };
-  }, [creators, tipRows, loading, error, refresh, recordTip, publicKey, publishCreator]);
+  }, [creators, tipRows, loading, error, refresh, recordTip, publicKey, publishCreator, uploadAvatar]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

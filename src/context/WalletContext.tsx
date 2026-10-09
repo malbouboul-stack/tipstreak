@@ -10,11 +10,13 @@ import {
   createTransferCheckedInstruction,
 } from '@solana/spl-token';
 import { SKR_MINT_ADDRESS, SKR_DECIMALS } from '../constants/skr';
+import { TREASURY_WALLET_ADDRESS } from '../constants/platform';
 
 // Adresse officielle du token USDC sur Solana devnet (différente du mainnet)
 const DEVNET_USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const USDC_DECIMALS = 6;
 const SKR_MINT = new PublicKey(SKR_MINT_ADDRESS);
+const TREASURY = new PublicKey(TREASURY_WALLET_ADDRESS);
 // Programme Memo : le message du fan est signé dans la transaction, l'Edge Function
 // record-tip le relit on-chain (impossible de l'attacher après coup à un tip qui n'est pas le sien)
 const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
@@ -44,6 +46,7 @@ async function waitForConfirmation(signature: string, timeoutMs = 30000): Promis
 }
 
 type SplTransfer = { mint: PublicKey; decimals: number; recipient: PublicKey; amount: number };
+export type TipOptions = { message?: string; boostSkr?: number; contributionUsdc?: number };
 
 // Les erreurs levées ici portent une clé de traduction (src/i18n/translations.ts) :
 // les écrans les affichent dans la langue choisie via translateError().
@@ -58,7 +61,7 @@ type WalletContextType = {
   connect: () => Promise<void>;
   disconnect: () => void;
   refreshBalances: () => Promise<void>;
-  sendTip: (recipientAddress: string, amountUsdc: number, message?: string, boostSkr?: number) => Promise<string>;
+  sendTip: (recipientAddress: string, amountUsdc: number, options?: TipOptions) => Promise<string>;
   signMessage: (message: string) => Promise<Uint8Array>;
 };
 
@@ -230,15 +233,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Tip en USDC, avec en option un boost en SKR. Le boost va lui aussi au créateur :
-  // TipStreak ne prélève rien. Les deux transferts partent dans la même transaction.
-  const sendTip = async (recipientAddress: string, amountUsdc: number, message?: string, boostSkr = 0): Promise<string> => {
+  // Tip en USDC, avec en option un boost en SKR (qui va lui aussi au créateur) et une contribution
+  // volontaire à TipStreak. Tout part dans la même transaction : une signature, tout ou rien.
+  const sendTip = async (recipientAddress: string, amountUsdc: number, options: TipOptions = {}): Promise<string> => {
     if (!publicKey) throw new Error('error.walletNotConnected');
+    const { message, boostSkr = 0, contributionUsdc = 0 } = options;
     const recipient = new PublicKey(recipientAddress);
     const transfers: SplTransfer[] = [{ mint: DEVNET_USDC_MINT, decimals: USDC_DECIMALS, recipient, amount: amountUsdc }];
     if (boostSkr > 0) {
       await checkSkrBalance(new PublicKey(publicKey), boostSkr);
       transfers.push({ mint: SKR_MINT, decimals: SKR_DECIMALS, recipient, amount: boostSkr });
+    }
+    if (contributionUsdc > 0) {
+      transfers.push({ mint: DEVNET_USDC_MINT, decimals: USDC_DECIMALS, recipient: TREASURY, amount: contributionUsdc });
     }
     return signAndSend(await buildTransaction(transfers, message));
   };

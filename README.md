@@ -20,11 +20,13 @@ weekly badges. Creators publish their page by signing with their wallet and rece
 - **USDC tips**: quick or custom amounts, optional message signed inside the transaction (Memo program).
 - **SKR boost** (optional): add 5 SKR for the creator to pin your tip at the top of their wall for 7 days.
   The USDC tip and the SKR boost go in **one transaction**: a single wallet approval, all or nothing.
+- **Support TipStreak** (optional, off by default): add 5% for the platform. The creator always gets 100% of the tip.
 - **My support**: creators you support, streak (consecutive weeks), total given.
 - **Loyalty badges**: 💜 Supporter (first tip) · 🔥 Active fan (3 tips in a week) · 🏆 Legend (8 weeks in a row).
 - **History** of your tips, grouped by day.
 
 **For creators**
+- **Profile photo**: pick a photo from the gallery, cropped to a square and signed with the wallet.
 - **Publish a page**: handle, name, category, bio — proven by a wallet signature (free, no transaction).
 - **Creator space**: supporters, USDC received (this week / all time), latest tips and fan messages.
 - **Public link** `tipstreak://<handle>` that opens the creator's page directly in the app.
@@ -108,17 +110,34 @@ supabase/
 
 ## Development
 
-Requirements: Node.js 24, an [Expo](https://expo.dev) account, a [Supabase](https://supabase.com) project, an Android phone.
+### Quick start (public demo backend)
+
+The repository ships a `.env` pointing to TipStreak's public devnet backend, so the app runs as soon as it's cloned:
+no Supabase setup needed. Requirements: Node.js 24, Android Studio's SDK (or an [Expo](https://expo.dev) account
+to build in the cloud), an Android phone or emulator, and a wallet app (Phantom) for tipping.
 
 ```bash
+git clone https://github.com/malbouboul-stack/tipstreak.git && cd tipstreak
 npm install
+npx expo run:android        # builds the app with its native modules and installs it on the connected device
 ```
 
+No Android SDK? Build a development client in the cloud instead, install it on the phone, then start Metro:
+```bash
+npx eas-cli@latest build -p android --profile development
+npx expo start
+```
+
+> TipStreak uses native modules (Mobile Wallet Adapter, SQLite, audio…), so it needs a development build:
+> it doesn't run in Expo Go.
+
+### Your own backend (optional)
+
 **Supabase** (once):
-1. SQL Editor: run `supabase/migrations/20260929000000_init.sql`, then `supabase/seed.sql`.
-2. Edge Functions: deploy `record-tip`, `register-creator` and `solana-rpc` (code in `supabase/functions/`),
+1. SQL Editor: run the files of `supabase/migrations/` in order, then `supabase/seed.sql`.
+2. Edge Functions: deploy `record-tip`, `register-creator`, `upload-avatar` and `solana-rpc` (code in `supabase/functions/`),
    with *Verify JWT* turned off (they verify their own proofs).
-3. Create `.env.local` at the project root (git-ignored):
+3. Create `.env.local` at the project root (git-ignored, takes precedence over `.env`):
    ```
    EXPO_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
    EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...

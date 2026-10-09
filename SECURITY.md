@@ -11,7 +11,9 @@ anything it says is re-checked against the chain or a wallet signature before it
 | Database writes | The app only has the Supabase **publishable** key, which Row Level Security limits to **read-only** access. Every write goes through an Edge Function that checks a proof. |
 | Tips (`record-tip`) | The transaction is re-read on-chain: it succeeded, paid USDC to the creator's wallet, and the fan signed it. Amount, time and message come from the chain, never from the app. The signature is the primary key, so a tip counts once. |
 | SKR boosts | The same transaction must also pay at least 5 SKR to the creator, from the same fan. |
+| Contributions to TipStreak | Optional extra USDC to the treasury wallet, read from the same transaction; the fan must have paid exactly tip + contribution. |
 | Creator pages (`register-creator`) | An ed25519 signature of the profile by the creator's wallet, with an expiry, so nobody can publish a page with someone else's wallet to divert tips. |
+| Profile photos (`upload-avatar`) | The wallet signs a message containing the SHA-256 of the image, with an expiry: a signature is only valid for that exact image. JPEG only, 512 KB max, stored in a public-read bucket that only the Edge Function can write to. |
 | RPC relay (`solana-rpc`) | Allow-list of read methods plus `sendTransaction` for transactions that are already signed by the user's wallet. |
 
 ## Notes on the hackathon security audit

@@ -6,6 +6,7 @@ import { colors, fonts, sectionLabel } from '../theme';
 import GradientButton from '../components/GradientButton';
 import SupportWall from '../components/SupportWall';
 import LanguagePicker from '../components/LanguagePicker';
+import AvatarPicker from '../components/AvatarPicker';
 import { useWallet, shortenAddress } from '../context/WalletContext';
 import { getCreatorLink, useData } from '../context/DataContext';
 import { useCreatorTips } from '../data/useCreatorTips';
@@ -139,6 +140,7 @@ export default function CreatorSetupScreen() {
         {myCreator && (
           <View style={styles.dashboard}>
             <Text style={styles.dashTitle}>{t('profile.yourPage', { link: getCreatorLink(myCreator) })}</Text>
+            <AvatarPicker creator={myCreator} />
             <View style={styles.dashStats}>
               <View style={styles.dashStat}>
                 <Text style={styles.dashN}>{myCreator.supporters}</Text>
