@@ -18,7 +18,8 @@ weekly badges. Creators publish their page by signing with their wallet and rece
 **For fans**
 - **Discover**: creator list, search by name or handle, filters generated from the real categories.
 - **USDC tips**: quick or custom amounts, optional message signed inside the transaction (Memo program).
-- **Boost** (optional): pay 5 SKR to pin your tip at the top of the creator's wall for 7 days.
+- **SKR boost** (optional): add 5 SKR for the creator to pin your tip at the top of their wall for 7 days.
+  The USDC tip and the SKR boost go in **one transaction**: a single wallet approval, all or nothing.
 - **My support**: creators you support, streak (consecutive weeks), total given.
 - **Loyalty badges**: 💜 Supporter (first tip) · 🔥 Active fan (3 tips in a week) · 🏆 Legend (8 weeks in a row).
 - **History** of your tips, grouped by day.
@@ -33,7 +34,7 @@ weekly badges. Creators publish their page by signing with their wallet and rece
 - A visual identity mixing the Solana world (purple, green) and the Solana Mobile / Seeker world (cyan, monospace type).
 - The logo: **7 rising bars, one per day of the week, and a gold coin — the tip — on the tallest one**.
   The same motif fills the "Your support week" card as you tip.
-- Animated launch screen, per-creator gradient avatars, English / French interface.
+- Animated launch screen, per-creator gradient avatars, interface in English, French, Spanish and Portuguese (Brazil).
 
 ## How trust is guaranteed
 
@@ -44,7 +45,7 @@ Every write goes through one of two Edge Functions that check a cryptographic pr
 |---|---|
 | Record a tip (`record-tip`) | The transaction is re-read **on-chain**: it succeeded, it sends USDC to the creator's wallet, and the fan signed it. Amount, date and message come from the chain, never from the app. The transaction signature is the primary key, so a tip can only count once. |
 | Publish a page (`register-creator`) | The creator signs a message containing their profile with their wallet. Nobody can create a page with someone else's wallet to divert their tips. |
-| Boost | The SKR transaction is re-read on-chain: right amount, right recipient, same fan as the tip, usable only once. |
+| Boost | The same transaction must also pay at least 5 SKR to the creator, from the same fan. Like the tip, it can only count once. |
 
 Result: fake tips, inflated streaks and creator impersonation are impossible.
 
@@ -76,12 +77,12 @@ Result: fake tips, inflated streaks and creator impersonation are impossible.
 
 ```
 src/
-  context/WalletContext.tsx   wallet connection, balances, tip / boost transfers, message signing
+  context/WalletContext.tsx   wallet connection, balances, tip + boost transaction, message signing
   context/DataContext.tsx     Supabase data, tip recording, creator publishing
   data/streaks.ts             streak and tier computation (Monday-to-Sunday weeks)
   data/useCreatorTips.ts      tips received by a creator
   lib/network.ts              network retries + RPC relay fallback
-  i18n/                       English / French texts
+  i18n/                       English, French, Spanish, Portuguese (Brazil) texts
   components/                 logo (StreakMark), launch screen, avatars, support wall, language picker
   navigation/linking.ts       tipstreak:// deep links
   screens/                    Discover, Creator profile, Tip, Support, History, Creator space
@@ -102,7 +103,7 @@ supabase/
 4. **Profile** tab → connect your wallet. **Discover** tab → pick a creator → **Send a tip** → sign in Phantom.
 5. To receive tips: **Profile** → *Receive tips* → choose a handle → **Publish my page** → sign (free).
 
-> The app follows the phone's language (English or French); switch it anytime with the **🌐 FR ▾** button
+> The app follows the phone's language (English, French, Spanish or Portuguese); switch it anytime with the **🌐 FR ▾** button
 > at the top of Discover and Profile.
 
 ## Development
@@ -139,7 +140,7 @@ and updates `src/constants/skr.ts`:
 ```bash
 node create-test-skr.js <DEVNET_WALLET_ADDRESS>
 ```
-To enable boost verification, set the `TSKR_MINT` and `PLATFORM_WALLET` secrets on the `record-tip` Edge Function.
+To enable boosts, set the `TSKR_MINT` secret on the `record-tip` Edge Function.
 
 ## Project status
 
@@ -151,7 +152,7 @@ To enable boost verification, set the `TSKR_MINT` and `PLATFORM_WALLET` secrets 
 | **End-to-end USDC tip** (Phantom signature → on-chain → verified → recorded) | ✅ [tested on a real phone](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet) |
 | On-chain tip verification (`record-tip`) | ✅ |
 | Support wall, creator space, loyalty tiers, weekly streaks | ✅ |
-| English / French interface, remembered choice | ✅ |
+| Interface in 4 languages (EN, FR, ES, PT-BR), remembered choice | ✅ |
 | Animated launch screen, new identity and app icon | ✅ |
 | `tipstreak://` deep links | ✅ implemented |
 | SKR boost | 🛠️ implemented (app + on-chain verification), not yet tested: needs the TSKR devnet test token |

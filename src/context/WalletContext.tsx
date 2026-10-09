@@ -9,11 +9,12 @@ import {
   createAssociatedTokenAccountInstruction,
   createTransferCheckedInstruction,
 } from '@solana/spl-token';
-import { SKR_MINT_ADDRESS, SKR_DECIMALS, PLATFORM_WALLET_ADDRESS } from '../constants/skr';
+import { SKR_MINT_ADDRESS, SKR_DECIMALS } from '../constants/skr';
 
 // Adresse officielle du token USDC sur Solana devnet (différente du mainnet)
 const DEVNET_USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const USDC_DECIMALS = 6;
+const SKR_MINT = new PublicKey(SKR_MINT_ADDRESS);
 // Programme Memo : le message du fan est signé dans la transaction, l'Edge Function
 // record-tip le relit on-chain (impossible de l'attacher après coup à un tip qui n'est pas le sien)
 const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
@@ -42,6 +43,8 @@ async function waitForConfirmation(signature: string, timeoutMs = 30000): Promis
   throw new Error('error.txNotConfirmed');
 }
 
+type SplTransfer = { mint: PublicKey; decimals: number; recipient: PublicKey; amount: number };
+
 // Les erreurs levées ici portent une clé de traduction (src/i18n/translations.ts) :
 // les écrans les affichent dans la langue choisie via translateError().
 
@@ -55,8 +58,7 @@ type WalletContextType = {
   connect: () => Promise<void>;
   disconnect: () => void;
   refreshBalances: () => Promise<void>;
-  sendTip: (recipientAddress: string, amountUsdc: number, message?: string) => Promise<string>;
-  sendBoost: (amountSkr: number) => Promise<string>;
+  sendTip: (recipientAddress: string, amountUsdc: number, message?: string, boostSkr?: number) => Promise<string>;
   signMessage: (message: string) => Promise<Uint8Array>;
 };
 
@@ -71,7 +73,6 @@ const WalletContext = createContext<WalletContextType>({
   disconnect: () => {},
   refreshBalances: async () => {},
   sendTip: async () => '',
-  sendBoost: async () => '',
   signMessage: async () => new Uint8Array(),
 });
 
@@ -139,45 +140,48 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return new PublicKey(Buffer.from(result.accounts[0].address, 'base64')).toBase58();
   };
 
-  // Prépare un transfert SPL AVANT d'ouvrir le wallet : toutes les requêtes réseau sont faites ici.
+  // Prépare la transaction AVANT d'ouvrir le wallet : toutes les requêtes réseau sont faites ici.
   // Une fois Phantom ouvert, l'app passe en arrière-plan : si elle devait encore attendre le réseau,
   // Phantom fermerait la session ("Cannot send in CLOSED").
-  const buildTransfer = async (params: {
-    mint: PublicKey;
-    decimals: number;
-    recipient: PublicKey;
-    amount: number;
-    memo?: string;
-  }): Promise<Transaction> => {
+  // Plusieurs transferts SPL (tip USDC + boost SKR) tiennent dans une seule transaction :
+  // une seule signature dans le wallet, et tout passe ou rien ne passe.
+  const buildTransaction = async (transfers: SplTransfer[], memo?: string): Promise<Transaction> => {
     if (!publicKey) throw new Error('error.walletNotConnected');
     const sender = new PublicKey(publicKey);
-    const senderAta = await getAssociatedTokenAddress(params.mint, sender);
-    const recipientAta = await getAssociatedTokenAddress(params.mint, params.recipient);
+    const accounts = await Promise.all(
+      transfers.map(async (transfer) => ({
+        transfer,
+        senderAta: await getAssociatedTokenAddress(transfer.mint, sender),
+        recipientAta: await getAssociatedTokenAddress(transfer.mint, transfer.recipient),
+      }))
+    );
 
-    const [recipientAtaInfo, latestBlockhash] = await Promise.all([
-      connection.getAccountInfo(recipientAta),
+    const [recipientAtaInfos, latestBlockhash] = await Promise.all([
+      Promise.all(accounts.map(({ recipientAta }) => connection.getAccountInfo(recipientAta))),
       connection.getLatestBlockhash(),
     ]);
 
     const instructions: TransactionInstruction[] = [];
-    // Si le destinataire n'a jamais reçu ce jeton, son "compte token" n'existe pas encore :
-    // on le crée dans la même transaction (le fan paie ces quelques centimes de frais).
-    if (!recipientAtaInfo) {
-      instructions.push(createAssociatedTokenAccountInstruction(sender, recipientAta, params.recipient, params.mint));
-    }
-    instructions.push(
-      createTransferCheckedInstruction(
-        senderAta,
-        params.mint,
-        recipientAta,
-        sender,
-        Math.round(params.amount * 10 ** params.decimals),
-        params.decimals
-      )
-    );
-    const memo = params.memo?.trim();
-    if (memo) {
-      instructions.push(new TransactionInstruction({ programId: MEMO_PROGRAM_ID, keys: [], data: Buffer.from(memo, 'utf-8') }));
+    accounts.forEach(({ transfer, senderAta, recipientAta }, i) => {
+      // Si le destinataire n'a jamais reçu ce jeton, son "compte token" n'existe pas encore :
+      // on le crée dans la même transaction (le fan paie ces quelques centimes de frais).
+      if (!recipientAtaInfos[i]) {
+        instructions.push(createAssociatedTokenAccountInstruction(sender, recipientAta, transfer.recipient, transfer.mint));
+      }
+      instructions.push(
+        createTransferCheckedInstruction(
+          senderAta,
+          transfer.mint,
+          recipientAta,
+          sender,
+          Math.round(transfer.amount * 10 ** transfer.decimals),
+          transfer.decimals
+        )
+      );
+    });
+    const text = memo?.trim();
+    if (text) {
+      instructions.push(new TransactionInstruction({ programId: MEMO_PROGRAM_ID, keys: [], data: Buffer.from(text, 'utf-8') }));
     }
 
     return new Transaction({
@@ -185,6 +189,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       blockhash: latestBlockhash.blockhash,
       lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
     }).add(...instructions);
+  };
+
+  // Solde SKR du fan, vérifié avant d'ouvrir le wallet : sans assez de SKR, toute la transaction échouerait
+  const checkSkrBalance = async (owner: PublicKey, amountSkr: number) => {
+    const accounts = await connection.getParsedTokenAccountsByOwner(owner, { mint: SKR_MINT });
+    const balance = accounts.value[0]?.account.data.parsed.info.tokenAmount.uiAmount ?? 0;
+    if (balance < amountSkr) throw new Error('error.notEnoughSkr');
   };
 
   // Phantom ne fait que SIGNER la transaction déjà prête ; c'est l'app qui l'envoie ensuite.
@@ -219,25 +230,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const sendTip = async (recipientAddress: string, amountUsdc: number, message?: string): Promise<string> => {
-    const transaction = await buildTransfer({
-      mint: DEVNET_USDC_MINT,
-      decimals: USDC_DECIMALS,
-      recipient: new PublicKey(recipientAddress),
-      amount: amountUsdc,
-      memo: message,
-    });
-    return signAndSend(transaction);
-  };
-
-  const sendBoost = async (amountSkr: number): Promise<string> => {
-    const transaction = await buildTransfer({
-      mint: new PublicKey(SKR_MINT_ADDRESS),
-      decimals: SKR_DECIMALS,
-      recipient: new PublicKey(PLATFORM_WALLET_ADDRESS),
-      amount: amountSkr,
-    });
-    return signAndSend(transaction);
+  // Tip en USDC, avec en option un boost en SKR. Le boost va lui aussi au créateur :
+  // TipStreak ne prélève rien. Les deux transferts partent dans la même transaction.
+  const sendTip = async (recipientAddress: string, amountUsdc: number, message?: string, boostSkr = 0): Promise<string> => {
+    if (!publicKey) throw new Error('error.walletNotConnected');
+    const recipient = new PublicKey(recipientAddress);
+    const transfers: SplTransfer[] = [{ mint: DEVNET_USDC_MINT, decimals: USDC_DECIMALS, recipient, amount: amountUsdc }];
+    if (boostSkr > 0) {
+      await checkSkrBalance(new PublicKey(publicKey), boostSkr);
+      transfers.push({ mint: SKR_MINT, decimals: SKR_DECIMALS, recipient, amount: boostSkr });
+    }
+    return signAndSend(await buildTransaction(transfers, message));
   };
 
   // Signature d'un simple message (gratuit, aucune transaction) : prouve qu'on possède le wallet.
@@ -264,7 +267,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   return (
     <WalletContext.Provider
-      value={{ publicKey, connecting, error, solBalance, usdcBalance, refreshingBalances, connect, disconnect, refreshBalances, sendTip, sendBoost, signMessage }}
+      value={{ publicKey, connecting, error, solBalance, usdcBalance, refreshingBalances, connect, disconnect, refreshBalances, sendTip, signMessage }}
     >
       {children}
     </WalletContext.Provider>

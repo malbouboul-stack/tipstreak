@@ -2,6 +2,9 @@ import 'react-native-url-polyfill/auto';
 import { createClient } from '@supabase/supabase-js';
 import { fetchWithRetry } from './network';
 
+// La clé "publishable" est faite pour être embarquée dans l'app (ce n'est pas un secret) :
+// la Row Level Security ne lui donne qu'un accès en lecture. Toutes les écritures passent par
+// les Edge Functions, qui vérifient une preuve on-chain ou une signature de wallet (cf. SECURITY.md).
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 

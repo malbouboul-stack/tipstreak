@@ -36,7 +36,7 @@ type DataContextType = {
   getCreator: (id: string) => Creator | undefined;
   getCreatorByHandle: (handle: string) => Creator | undefined;
   getSupportRelation: (creatorId: string) => SupportRelation | undefined;
-  recordTip: (params: { signature: string; creatorId: string; boostSignature?: string | null }) => Promise<void>;
+  recordTip: (params: { signature: string; creatorId: string }) => Promise<void>;
   myCreator: Creator | undefined; // page créateur du wallet connecté, s'il en a publié une
   publishCreator: (profile: CreatorProfileInput) => Promise<Creator>;
 };
@@ -170,9 +170,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [publicKey, applyResult]);
 
   const recordTip = useCallback<DataContextType['recordTip']>(
-    async ({ signature, creatorId, boostSignature }) => {
-      // L'Edge Function relit la transaction on-chain avant d'enregistrer quoi que ce soit
-      await invokeFunction('record-tip', { signature, creatorId, boostSignature: boostSignature ?? null });
+    async ({ signature, creatorId }) => {
+      // L'Edge Function relit la transaction on-chain (boost SKR compris) avant d'enregistrer quoi que ce soit
+      await invokeFunction('record-tip', { signature, creatorId });
       await refresh();
     },
     [refresh]

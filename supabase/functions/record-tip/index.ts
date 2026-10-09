@@ -1,11 +1,12 @@
 // Edge Function record-tip : seul point d'entrée pour écrire un tip en base.
 //
-// L'app envoie { signature, creatorId, boostSignature? } juste après la transaction.
+// L'app envoie { signature, creatorId } juste après la transaction.
 // On relit la transaction sur Solana devnet et on n'enregistre que ce qu'elle prouve :
 //   - elle a réussi et verse bien des USDC au wallet du créateur ;
 //   - le fan est le signataire dont le solde USDC a baissé du même montant ;
-//   - montant, date (heure du bloc) et message (memo) viennent de la chaîne, jamais de l'app.
-// La signature est la clé primaire : un même tip ne peut pas être compté deux fois.
+//   - montant, date (heure du bloc) et message (memo) viennent de la chaîne, jamais de l'app ;
+//   - boost : la même transaction verse aussi au moins 5 TSKR au créateur, payés par le même fan.
+// La signature est la clé primaire : un même tip (et donc son boost) ne peut pas être compté deux fois.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -15,9 +16,8 @@ const BOOST_COST_RAW = 5_000_000n; // 5 TSKR (6 décimales), cf. BOOST_COST_SKR 
 const MAX_MESSAGE_LENGTH = 280;
 
 const RPC_URL = Deno.env.get('SOLANA_RPC_URL') ?? 'https://api.devnet.solana.com';
-// Secrets à définir quand le jeton TSKR existera (boost refusé tant qu'ils manquent)
+// Jeton de test devnet représentant SKR (secret de la fonction ; sans lui, aucun tip n'est boosté)
 const TSKR_MINT = Deno.env.get('TSKR_MINT');
-const PLATFORM_WALLET = Deno.env.get('PLATFORM_WALLET');
 
 // Clé secrète fournie automatiquement par Supabase : contourne RLS, ne quitte jamais le serveur
 const supabase = createClient(
@@ -122,13 +122,9 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => null);
     const signature: unknown = body?.signature;
     const creatorId: unknown = body?.creatorId;
-    const boostSignature: unknown = body?.boostSignature ?? null;
 
     if (typeof signature !== 'string' || !BASE58_SIGNATURE.test(signature)) throw new HttpError(400, 'signature invalide');
     if (typeof creatorId !== 'string' || !UUID.test(creatorId)) throw new HttpError(400, 'creatorId invalide');
-    if (boostSignature !== null && (typeof boostSignature !== 'string' || !BASE58_SIGNATURE.test(boostSignature))) {
-      throw new HttpError(400, 'boostSignature invalide');
-    }
 
     // Déjà enregistré (le téléphone a réessayé) : on renvoie simplement la ligne existante
     const existing = await supabase.from('tips').select().eq('signature', signature).maybeSingle();
@@ -147,11 +143,14 @@ Deno.serve(async (req) => {
     const { fan, amount } = verifyTransfer(tx, USDC_MINT, creator.wallet_address, 'de tip');
     if (tx.blockTime == null) throw new HttpError(502, 'Heure du bloc indisponible, réessaie dans quelques secondes');
 
-    if (boostSignature) {
-      if (!TSKR_MINT || !PLATFORM_WALLET) throw new HttpError(400, 'Boost pas encore configuré sur le serveur');
-      const boost = verifyTransfer(await fetchTransaction(boostSignature), TSKR_MINT, PLATFORM_WALLET, 'de boost');
+    // Boost : des TSKR versés au créateur dans la même transaction que le tip
+    const boostedAmount = TSKR_MINT ? (balanceDeltas(tx, TSKR_MINT).get(creator.wallet_address) ?? 0n) : 0n;
+    let boosted = false;
+    if (boostedAmount > 0n) {
+      const boost = verifyTransfer(tx, TSKR_MINT!, creator.wallet_address, 'de boost');
       if (boost.fan !== fan) throw new HttpError(400, 'Le boost ne vient pas du même wallet que le tip');
       if (boost.amount < BOOST_COST_RAW) throw new HttpError(400, 'Montant du boost insuffisant');
+      boosted = true;
     }
 
     const { data, error } = await supabase
@@ -161,8 +160,8 @@ Deno.serve(async (req) => {
         fan_wallet: fan,
         creator_id: creator.id,
         amount: formatUnits(amount, USDC_DECIMALS),
-        boosted: boostSignature !== null,
-        boost_signature: boostSignature,
+        boosted,
+        boost_signature: boosted ? signature : null,
         message: readMemo(tx),
         created_at: new Date(tx.blockTime * 1000).toISOString(),
       })
@@ -170,10 +169,9 @@ Deno.serve(async (req) => {
       .single();
 
     if (error?.code === '23505') {
-      // Doublon : soit deux envois simultanés du même tip, soit un boost réutilisé
+      // Doublon : deux envois simultanés du même tip
       const race = await supabase.from('tips').select().eq('signature', signature).maybeSingle();
       if (race.data) return json(200, race.data);
-      throw new HttpError(409, 'Ce boost a déjà été utilisé pour un autre tip');
     }
     if (error) throw error;
 

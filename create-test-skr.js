@@ -87,7 +87,6 @@ async function main() {
 
 export const SKR_MINT_ADDRESS = '${mint.toBase58()}';
 export const SKR_DECIMALS = 6;
-export const PLATFORM_WALLET_ADDRESS = '${mintAuthority.publicKey.toBase58()}';
 `;
 
   fs.writeFileSync(path.join(constantsDir, 'skr.ts'), fileContent);

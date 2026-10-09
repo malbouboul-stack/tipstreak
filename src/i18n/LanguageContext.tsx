@@ -1,10 +1,15 @@
 import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
-import { en, fr, TranslationKey } from './translations';
+import { en, es, fr, pt, TranslationKey } from './translations';
 
-export type Language = 'fr' | 'en';
+export type Language = 'fr' | 'en' | 'es' | 'pt';
 type Params = Record<string, string | number>;
 
-const DICTIONARIES: Record<Language, Record<TranslationKey, string>> = { fr, en };
+const DICTIONARIES: Record<Language, Record<TranslationKey, string>> = { fr, en, es, pt };
+const LANGUAGES = Object.keys(DICTIONARIES) as Language[];
+// Pour les dates : le portugais suit l'usage brésilien
+const LOCALES: Record<Language, string> = { fr: 'fr-FR', en: 'en-US', es: 'es-ES', pt: 'pt-BR' };
+
+const isLanguage = (code: string | null | undefined): code is Language => LANGUAGES.includes(code as Language);
 const STORAGE_KEY = 'tipstreak.language';
 
 type KeyValueStore = { getItemSync(key: string): string | null; setItemSync(key: string, value: string): void };
@@ -30,13 +35,15 @@ function deviceLanguage(): Language {
   } catch {
     code = Intl.DateTimeFormat().resolvedOptions().locale;
   }
-  return code?.toLowerCase().startsWith('fr') ? 'fr' : 'en';
+  // "pt-BR" → "pt" ; une langue non traduite retombe sur l'anglais
+  const base = code?.toLowerCase().slice(0, 2);
+  return isLanguage(base) ? base : 'en';
 }
 
 function initialLanguage(store: KeyValueStore | null): Language {
   try {
     const saved = store?.getItemSync(STORAGE_KEY);
-    if (saved === 'fr' || saved === 'en') return saved;
+    if (isLanguage(saved)) return saved;
   } catch {}
   return deviceLanguage();
 }
@@ -48,7 +55,7 @@ export function translate(language: Language, key: TranslationKey, params?: Para
 
 type LanguageContextType = {
   language: Language;
-  locale: string; // pour les dates : 'fr-FR' ou 'en-US'
+  locale: string; // pour les dates : 'fr-FR', 'en-US', 'es-ES' ou 'pt-BR'
   setLanguage: (language: Language) => void;
   t: (key: TranslationKey, params?: Params) => string;
   translateError: (message: string | null | undefined, fallback?: TranslationKey) => string;
@@ -92,7 +99,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       return pattern ? t(pattern[1]) : message;
     };
 
-    return { language, locale: language === 'fr' ? 'fr-FR' : 'en-US', setLanguage, t, translateError };
+    return { language, locale: LOCALES[language], setLanguage, t, translateError };
   }, [language, setLanguage]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

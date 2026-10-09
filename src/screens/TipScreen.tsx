@@ -25,11 +25,11 @@ export default function TipScreen() {
   const { getCreator, getSupportRelation, recordTip } = useData();
   const creator = getCreator(creatorId);
   const relation = getSupportRelation(creatorId);
-  const { publicKey, connecting, connect, sendTip, sendBoost, refreshBalances, usdcBalance, solBalance } = useWallet();
+  const { publicKey, connecting, connect, sendTip, refreshBalances, usdcBalance, solBalance } = useWallet();
   const { t, translateError } = useLanguage();
 
-  const [amount, setAmount] = useState(5);
-  const [customAmount, setCustomAmount] = useState('');
+  // Un seul champ texte : les montants rapides le remplissent, et on peut l'effacer entièrement
+  const [amountText, setAmountText] = useState('5');
   const [boosted, setBoosted] = useState(false);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -58,7 +58,7 @@ export default function TipScreen() {
   }
 
   // Montant valide : strictement positif, 6 décimales max (précision de l'USDC)
-  const parsedAmount = customAmount ? parseFloat(customAmount.replace(',', '.')) : amount;
+  const parsedAmount = parseFloat(amountText.replace(',', '.'));
   const finalAmount = Number.isFinite(parsedAmount) && parsedAmount > 0 ? Math.round(parsedAmount * 1e6) / 1e6 : 0;
 
   // Vérifications avant envoi : sinon le wallet renvoie une erreur peu compréhensible
@@ -95,26 +95,25 @@ export default function TipScreen() {
 
           <Text style={styles.sectionLabel}>{t('tip.quickAmount')}</Text>
           <View style={styles.chipsRow}>
-            {QUICK_AMOUNTS.map((a) => (
-              <TouchableOpacity
-                key={a}
-                style={[styles.chip, amount === a && !customAmount && styles.chipActive]}
-                onPress={() => {
-                  setAmount(a);
-                  setCustomAmount('');
-                }}
-              >
-                <Text style={[styles.chipText, amount === a && !customAmount && styles.chipTextActive]}>{a}</Text>
-              </TouchableOpacity>
-            ))}
+            {QUICK_AMOUNTS.map((a) => {
+              const active = finalAmount === a;
+              return (
+                <TouchableOpacity key={a} style={[styles.chip, active && styles.chipActive]} onPress={() => setAmountText(String(a))}>
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>{a}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
           <View style={styles.amountDisplay}>
             <TextInput
               style={styles.amountInput}
-              value={customAmount || String(amount)}
-              onChangeText={(text) => setCustomAmount(text.replace(/[^0-9.,]/g, ''))}
+              value={amountText}
+              onChangeText={(text) => setAmountText(text.replace(/[^0-9.,]/g, ''))}
               keyboardType="decimal-pad"
+              placeholder="0"
+              placeholderTextColor={colors.textFaint}
+              selectTextOnFocus
             />
             <Text style={styles.currency}>USDC</Text>
           </View>
@@ -154,30 +153,14 @@ export default function TipScreen() {
             onPress={async () => {
               setSending(true);
               try {
-                const tipSignature = await sendTip(creator.walletAddress, finalAmount, message);
+                // Tip et boost éventuel partent dans une seule transaction (une seule signature)
+                const tipSignature = await sendTip(creator.walletAddress, finalAmount, message, boosted ? BOOST_COST_SKR : 0);
                 console.log('Tip signature:', tipSignature);
 
-                let boostSignature: string | null = null;
-                if (boosted) {
-                  try {
-                    boostSignature = await sendBoost(BOOST_COST_SKR);
-                    console.log('Boost signature:', boostSignature);
-                  } catch (boostError: any) {
-                    console.error('Boost error', boostError);
-                    Alert.alert(
-                      t('tip.boostFailedTitle'),
-                      t('tip.boostFailedText', {
-                        amount: finalAmount,
-                        error: translateError(boostError?.message, 'tip.boostFailedDefault'),
-                      })
-                    );
-                  }
-                }
-
-                // Enregistrement en base : l'Edge Function vérifie la transaction on-chain
+                // Enregistrement en base : l'Edge Function vérifie la transaction on-chain (boost compris)
                 let recordError: string | null = null;
                 try {
-                  await recordTip({ signature: tipSignature, creatorId: creator.id, boostSignature });
+                  await recordTip({ signature: tipSignature, creatorId: creator.id });
                 } catch (recordErr: any) {
                   console.error('Record tip error', recordErr, tipSignature);
                   recordError = translateError(recordErr?.message);
@@ -191,10 +174,10 @@ export default function TipScreen() {
                     t('tip.notRecordedText', { amount: finalAmount, error: recordError }),
                     [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
                   );
-                } else if (!boosted || boostSignature) {
+                } else {
                   Alert.alert(
                     t('tip.successTitle'),
-                    t('tip.successText', { amount: finalAmount, name: creator.name }) + (boostSignature ? t('tip.successBoost') : ''),
+                    t('tip.successText', { amount: finalAmount, name: creator.name }) + (boosted ? t('tip.successBoost') : ''),
                     [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
                   );
                 }

@@ -6,6 +6,8 @@ import { Language, useLanguage } from '../i18n/LanguageContext';
 const OPTIONS: { code: Language; label: string }[] = [
   { code: 'fr', label: 'Français' },
   { code: 'en', label: 'English' },
+  { code: 'es', label: 'Español' },
+  { code: 'pt', label: 'Português (Brasil)' },
 ];
 
 // Bouton compact affichant la langue actuelle ("FR ▾") ; un appui ouvre le choix de la langue.
