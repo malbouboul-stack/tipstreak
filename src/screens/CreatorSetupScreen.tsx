@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Share, RefreshControl } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Share, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fonts, sectionLabel } from '../theme';
@@ -7,6 +7,7 @@ import GradientButton from '../components/GradientButton';
 import SupportWall from '../components/SupportWall';
 import LanguagePicker from '../components/LanguagePicker';
 import AvatarPicker from '../components/AvatarPicker';
+import { useDialog } from '../components/Dialog';
 import { useWallet, shortenAddress } from '../context/WalletContext';
 import { getCreatorLink, useData } from '../context/DataContext';
 import { useCreatorTips } from '../data/useCreatorTips';
@@ -21,6 +22,7 @@ export default function CreatorSetupScreen() {
   const { myCreator, publishCreator, refresh } = useData();
   const { tips: receivedTips, loading: tipsLoading, reload: reloadTips, fetchedAt } = useCreatorTips(myCreator?.id);
   const { t, translateError } = useLanguage();
+  const showDialog = useDialog();
   const [isCreator, setIsCreator] = useState(false);
   const [handle, setHandle] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -58,13 +60,18 @@ export default function CreatorSetupScreen() {
     try {
       const creator = await publishCreator({ handle, name: displayName, category, bio });
       setIsCreator(false); // la page est en ligne : on replie le formulaire, le tableau de bord prend le relais
-      Alert.alert(
-        myCreator ? t('profile.updatedTitle') : t('profile.publishedTitle'),
-        t('profile.publishedText', { link: getCreatorLink(creator) })
-      );
+      showDialog({
+        title: myCreator ? t('profile.updatedTitle') : t('profile.publishedTitle'),
+        message: t('profile.publishedText', { link: getCreatorLink(creator) }),
+        tone: 'success',
+      });
     } catch (e: any) {
       console.error('Publish creator error', e);
-      Alert.alert(t('profile.publishFailedTitle'), translateError(e?.message, 'profile.retryLater'));
+      showDialog({
+        title: t('profile.publishFailedTitle'),
+        message: translateError(e?.message, 'profile.retryLater'),
+        tone: 'error',
+      });
     } finally {
       setPublishing(false);
     }

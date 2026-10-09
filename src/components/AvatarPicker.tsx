@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Avatar from './Avatar';
+import { useDialog } from './Dialog';
 import { colors, fonts } from '../theme';
 import { Creator, useData } from '../context/DataContext';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -11,6 +12,7 @@ const SIZE = 512; // photo envoyée : JPEG 512 × 512
 export default function AvatarPicker({ creator }: { creator: Creator }) {
   const { uploadAvatar } = useData();
   const { t, translateError } = useLanguage();
+  const showDialog = useDialog();
   const [uploading, setUploading] = useState(false);
 
   const pick = async () => {
@@ -36,10 +38,10 @@ export default function AvatarPicker({ creator }: { creator: Creator }) {
       if (!saved.base64) throw new Error('tip.unknownError');
 
       await uploadAvatar(saved.base64);
-      Alert.alert(t('profile.photoUpdated'));
+      showDialog({ title: t('profile.photoUpdated'), tone: 'success' });
     } catch (e: any) {
       console.error('Avatar upload error', e);
-      Alert.alert(t('profile.photoFailed'), translateError(e?.message, 'profile.retryLater'));
+      showDialog({ title: t('profile.photoFailed'), message: translateError(e?.message, 'profile.retryLater'), tone: 'error' });
     } finally {
       setUploading(false);
     }

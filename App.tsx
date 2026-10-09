@@ -18,6 +18,7 @@ import TipScreen from './src/screens/TipScreen';
 import { WalletProvider } from './src/context/WalletContext';
 import { DataProvider, useData } from './src/context/DataContext';
 import LaunchScreen from './src/components/LaunchScreen';
+import { DialogProvider } from './src/components/Dialog';
 import { LanguageProvider } from './src/i18n/LanguageContext';
 import { colors } from './src/theme';
 
@@ -95,7 +96,9 @@ export default function App() {
       <LanguageProvider>
         <WalletProvider>
           <DataProvider>
-            <AppShell />
+            <DialogProvider>
+              <AppShell />
+            </DialogProvider>
           </DataProvider>
         </WalletProvider>
       </LanguageProvider>

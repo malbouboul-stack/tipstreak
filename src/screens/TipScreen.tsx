@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { colors, fonts, sectionLabel } from '../theme';
 import { ChevronLeft, BoltIcon } from '../components/Icons';
 import GradientButton from '../components/GradientButton';
 import Avatar from '../components/Avatar';
-import TipSuccessModal from '../components/TipSuccessModal';
+import TipSuccessModal, { TipPhase } from '../components/TipSuccessModal';
+import { useDialog } from '../components/Dialog';
 import { CONTRIBUTION_RATE } from '../constants/platform';
 import { useData } from '../context/DataContext';
 import { useWallet } from '../context/WalletContext';
@@ -29,6 +30,7 @@ export default function TipScreen() {
   const relation = getSupportRelation(creatorId);
   const { publicKey, connecting, connect, sendTip, refreshBalances, usdcBalance, solBalance } = useWallet();
   const { t, translateError } = useLanguage();
+  const showDialog = useDialog();
 
   // Un seul champ texte : les montants rapides le remplissent, et on peut l'effacer entièrement
   const [amountText, setAmountText] = useState('5');
@@ -37,7 +39,9 @@ export default function TipScreen() {
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   // Tip confirmé : affiche l'écran de réussite animé (son + vibration)
-  const [success, setSuccess] = useState<{ amount: number; boosted: boolean; contributed: boolean } | null>(null);
+  const [success, setSuccess] = useState<{ amount: number; boosted: boolean; contributed: boolean; phase: TipPhase } | null>(
+    null
+  );
 
   if (!creator) return null;
 
@@ -179,37 +183,37 @@ export default function TipScreen() {
             onPress={async () => {
               setSending(true);
               try {
-                // Tip, boost et contribution éventuels partent dans une seule transaction (une seule signature)
+                // Tip, boost et contribution éventuels partent dans une seule transaction (une seule signature).
+                // Dès le retour du wallet, la carte de confirmation s'ouvre en "envoi en cours".
                 const tipSignature = await sendTip(creator.walletAddress, finalAmount, {
                   message,
                   boostSkr: boosted ? BOOST_COST_SKR : 0,
                   contributionUsdc: contribution,
+                  onSigned: () => setSuccess({ amount: finalAmount, boosted, contributed: contribution > 0, phase: 'sending' }),
                 });
                 console.log('Tip signature:', tipSignature);
+                // Confirmé on-chain : la pièce tombe (son + vibration), l'argent est arrivé chez le créateur
+                setSuccess((s) => s && { ...s, phase: 'confirmed' });
+                refreshBalances();
 
-                // Enregistrement en base : l'Edge Function vérifie la transaction on-chain (boost compris)
-                let recordError: string | null = null;
+                // Enregistrement en base pendant l'animation : l'Edge Function relit la transaction on-chain
                 try {
                   await recordTip({ signature: tipSignature, creatorId: creator.id });
+                  setSuccess((s) => s && { ...s, phase: 'recorded' });
                 } catch (recordErr: any) {
                   console.error('Record tip error', recordErr, tipSignature);
-                  recordError = translateError(recordErr?.message);
-                }
-
-                await refreshBalances();
-
-                if (recordError) {
-                  Alert.alert(
-                    t('tip.notRecordedTitle'),
-                    t('tip.notRecordedText', { amount: finalAmount, error: recordError }),
-                    [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
-                  );
-                } else {
-                  setSuccess({ amount: finalAmount, boosted, contributed: contribution > 0 });
+                  setSuccess(null);
+                  showDialog({
+                    title: t('tip.notRecordedTitle'),
+                    message: t('tip.notRecordedText', { amount: finalAmount, error: translateError(recordErr?.message) }),
+                    tone: 'warning',
+                    onClose: () => navigation.goBack(),
+                  });
                 }
               } catch (e: any) {
                 console.error('Send tip error', e);
-                Alert.alert(t('tip.failedTitle'), translateError(e?.message, 'tip.failedDefault'));
+                setSuccess(null);
+                showDialog({ title: t('tip.failedTitle'), message: translateError(e?.message, 'tip.failedDefault'), tone: 'error' });
               } finally {
                 setSending(false);
               }
@@ -223,6 +227,7 @@ export default function TipScreen() {
         creatorName={creator.name}
         boosted={success?.boosted ?? false}
         contributed={success?.contributed ?? false}
+        phase={success?.phase ?? 'sending'}
         onClose={() => {
           setSuccess(null);
           navigation.goBack();

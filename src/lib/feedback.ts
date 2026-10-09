@@ -1,6 +1,8 @@
 // Son de pièce + vibration quand un tip arrive. Les modules natifs (expo-audio, expo-haptics) sont
 // chargés prudemment : une development build plus ancienne ne les contient pas, l'app reste alors muette.
 
+import { Platform } from 'react-native';
+
 /* eslint-disable @typescript-eslint/no-require-imports */
 function load<T>(name: () => T): T | null {
   try {
@@ -19,7 +21,9 @@ let audioModeSet = false;
 
 export async function playTipSuccess() {
   try {
-    haptics?.notificationAsync(haptics.NotificationFeedbackType.Success);
+    // Android : retour haptique "Confirm", plus doux que la vibration simulée de notificationAsync
+    if (Platform.OS === 'android') haptics?.performAndroidHapticsAsync(haptics.AndroidHaptics.Confirm);
+    else haptics?.notificationAsync(haptics.NotificationFeedbackType.Success);
   } catch {}
 
   if (!audio) return;
