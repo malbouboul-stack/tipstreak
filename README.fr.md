@@ -11,8 +11,8 @@ et reçoivent les tips directement dessus.
 
 > Projet réalisé pour le hackathon Solana Mobile. Tourne sur **Solana devnet**.
 >
-> 📲 **Télécharger l'APK Android :** [TipStreak (preview) sur EAS](https://expo.dev/accounts/ibmd/projects/tipstreak/builds/29220317-9c40-4b8f-ac23-c8cdc058a9ee)
-> · 🎬 Premier vrai tip, vérifié on-chain : [voir sur Solana Explorer](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet)
+> 📲 **Télécharger l'APK Android :** [TipStreak (preview)](https://expo.dev/artifacts/eas/IY5ujuUSBYVfjhn7fwhA5yp656DQgeU3FTDoBPwrrlw.apk) · 🎬 [Vidéo de démo](https://www.youtube.com/watch?v=76yhvYfAuUM)
+> · ⛓️ Premier vrai tip, vérifié on-chain : [voir sur Solana Explorer](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet)
 
 ## Fonctionnalités
 
@@ -37,7 +37,10 @@ et reçoivent les tips directement dessus.
 - Une identité qui mêle l'univers Solana (violet, vert) et celui de Solana Mobile / Seeker (cyan, typo monospace).
 - Le logo : **7 barres qui montent, une par jour de la semaine, et une pièce dorée — le tip — sur la plus haute**.
   Le même motif remplit la carte « Ta semaine de soutien » au fil des tips.
-- Écran de lancement animé, avatars en dégradé propres à chaque créateur, interface en français, anglais, espagnol et portugais (Brésil).
+- **Confirmation vivante** : dès la signature, les barres du logo ondulent pendant que Solana confirme, puis se remplissent
+  et la pièce dorée tombe, avec un son doux et une légère vibration. Tous les messages utilisent la même carte sombre.
+- Écran de lancement animé, photos de profil (ou avatars en dégradé), interface en **français, anglais, espagnol et
+  portugais (Brésil)**, selon la langue du téléphone.
 
 ## Comment la confiance est garantie
 
@@ -101,7 +104,7 @@ supabase/
 ## Tester l'app
 
 1. Installer l'APK **TipStreak (preview)** sur un téléphone Android :
-   [page de la build EAS](https://expo.dev/accounts/ibmd/projects/tipstreak/builds/29220317-9c40-4b8f-ac23-c8cdc058a9ee).
+   [téléchargement direct de l'APK](https://expo.dev/artifacts/eas/IY5ujuUSBYVfjhn7fwhA5yp656DQgeU3FTDoBPwrrlw.apk).
 2. Installer **Phantom** et activer le **mode Testnet** (Paramètres → Paramètres pour développeurs), réseau **Solana Devnet**.
 3. Obtenir du SOL devnet ([faucet.solana.com](https://faucet.solana.com)) et de l'USDC devnet ([faucet.circle.com](https://faucet.circle.com), *Solana Devnet*).
 4. Onglet **Profil** → connecter le wallet. Onglet **Découvrir** → choisir un créateur → **Envoyer un tip** → signer dans Phantom.
@@ -168,23 +171,38 @@ Pour activer les boosts, définir le secret `TSKR_MINT` de l'Edge Function `reco
 
 | Fonctionnalité | État |
 |---|---|
-| Connexion wallet, soldes SOL / USDC | ✅ |
-| Base Supabase, lecture seule côté app | ✅ |
-| Publication de page créateur par signature | ✅ testé avec Phantom |
+| Connexion wallet (Mobile Wallet Adapter 2.0), soldes SOL / USDC | ✅ |
 | **Tip USDC de bout en bout** (signature Phantom → on-chain → vérifié → enregistré) | ✅ [testé sur un vrai téléphone](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet) |
-| Vérification on-chain des tips (`record-tip`) | ✅ |
-| Mur des soutiens, espace créateur, paliers de fidélité, séries hebdomadaires | ✅ |
-| Interface en 4 langues (FR, EN, ES, PT-BR), choix mémorisé | ✅ |
-| Écran de lancement animé, nouvelle identité et icône | ✅ |
-| Liens profonds `tipstreak://` | ✅ codé |
-| Boost SKR | 🛠️ codé (app + vérification on-chain), pas encore testé : nécessite le jeton de test TSKR sur devnet |
+| Vérification on-chain de chaque tip (`record-tip`), base en lecture seule côté app | ✅ |
+| **Boost SKR au créateur**, dans la même transaction que le tip | ✅ testé sur devnet (jeton de test TSKR) |
+| **Contribution volontaire à TipStreak** (+5 %), dans la même transaction | ✅ testée sur devnet |
+| Pages créateur et **photos de profil**, signées par le wallet du créateur | ✅ testé avec Phantom |
+| Mur des soutiens, espace créateur, paliers de fidélité, séries hebdomadaires, historique | ✅ |
+| **Confirmation vivante** : logo animé, son doux, vibration ; fenêtres au style de l'app | ✅ |
+| Interface en **4 langues** (FR, EN, ES, PT-BR), suit le téléphone, choix mémorisé | ✅ |
+| Écran de lancement animé, identité visuelle et icône | ✅ |
+| Liens profonds `tipstreak://` | ✅ |
+| Testé par de vrais utilisateurs, sur leurs propres téléphones et wallets | ✅ 3 testeurs |
+| Audit de sécurité du hackathon traité ([SECURITY.md](SECURITY.md)) | ✅ |
+
+## Modèle économique
+
+Les créateurs reçoivent toujours **100 % de leurs tips et boosts**. TipStreak gagne sa vie avec des services facultatifs :
+- **En place :** « Soutenir TipStreak » +5 % au moment du tip, facultatif et désactivé par défaut (le modèle de GoFundMe).
+- **Ensuite :** tip avec n'importe quel jeton (SOL, BONK…) : un swap Jupiter verse des USDC au créateur, petite commission sur le swap uniquement.
+- **Ensuite :** **tips sponsorisés** : une marque double les tips d'une catégorie pendant une semaine (« [Marque] double tes tips musique »).
+  Le budget pub va aux créateurs au lieu de les interrompre, TipStreak prend une commission sur la campagne. Aucune bannière de pub dans l'app.
+- **Plus tard :** Créateur Pro (avantages par palier, statistiques, page personnalisée) et un overlay pour les créateurs en live.
 
 ## Suite (roadmap)
 
-- **Payer en n'importe quel jeton** : swap via Jupiter (mainnet) directement vers le compte USDC du créateur,
-  avec des frais de plateforme comme source de revenus.
-- **Passage mainnet** : vrai jeton SKR (`SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3`) et USDC mainnet.
-- Photos de profil, avantages définis par les créateurs pour chaque palier, liens `https://` (App Links).
+- **Bêta mainnet** avec une dizaine de vrais créateurs : USDC mainnet et vrai jeton SKR (`SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3`),
+  RPC dédié, trésorerie sur un wallet matériel / multisig, plafond par tip pendant la bêta, revue de sécurité des Edge Functions.
+- Publication sur le **Solana dApp Store**.
+- **Créateurs vérifiés** (compte X / YouTube lié) avant d'apparaître dans Découvrir.
+- **Frais réseau sponsorisés** : TipStreak paie les frais de transaction du fan, un tip ne demande que des USDC.
+- **Payer avec n'importe quel jeton** (swap Jupiter) et **tips sponsorisés** (cf. modèle économique).
+- Notifications de tips pour les créateurs, avantages définis par les créateurs pour chaque palier, liens `https://` (App Links), overlay de live.
 
 ## Licence
 

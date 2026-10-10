@@ -10,8 +10,8 @@ weekly badges. Creators publish their page by signing with their wallet and rece
 
 > Built for the Solana Mobile hackathon. Runs on **Solana devnet**.
 >
-> 📲 **Download the Android APK:** [TipStreak (preview) on EAS](https://expo.dev/accounts/ibmd/projects/tipstreak/builds/29220317-9c40-4b8f-ac23-c8cdc058a9ee)
-> · 🎬 First real tip, verified on-chain: [view on Solana Explorer](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet)
+> 📲 **Download the Android APK:** [TipStreak (preview)](https://expo.dev/artifacts/eas/IY5ujuUSBYVfjhn7fwhA5yp656DQgeU3FTDoBPwrrlw.apk) · 🎬 [Demo video](https://www.youtube.com/watch?v=76yhvYfAuUM)
+> · ⛓️ First real tip, verified on-chain: [view on Solana Explorer](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet)
 
 ## Features
 
@@ -36,7 +36,10 @@ weekly badges. Creators publish their page by signing with their wallet and rece
 - A visual identity mixing the Solana world (purple, green) and the Solana Mobile / Seeker world (cyan, monospace type).
 - The logo: **7 rising bars, one per day of the week, and a gold coin — the tip — on the tallest one**.
   The same motif fills the "Your support week" card as you tip.
-- Animated launch screen, per-creator gradient avatars, interface in English, French, Spanish and Portuguese (Brazil).
+- **Live tip confirmation**: as soon as the wallet signs, the logo's bars pulse while Solana confirms, then fill up and the
+  gold coin drops with a soft chime and a light haptic. Every message uses the same dark card, never a system dialog.
+- Animated launch screen, profile photos (or per-creator gradient avatars), interface in **English, French, Spanish and
+  Portuguese (Brazil)**, following the phone's language.
 
 ## How trust is guaranteed
 
@@ -99,7 +102,7 @@ supabase/
 ## Try the app
 
 1. Install the **TipStreak (preview)** APK on an Android phone:
-   [EAS build page](https://expo.dev/accounts/ibmd/projects/tipstreak/builds/29220317-9c40-4b8f-ac23-c8cdc058a9ee).
+   [direct APK download](https://expo.dev/artifacts/eas/IY5ujuUSBYVfjhn7fwhA5yp656DQgeU3FTDoBPwrrlw.apk).
 2. Install **Phantom** and turn on **Testnet mode** (Settings → Developer settings), network **Solana Devnet**.
 3. Get devnet SOL ([faucet.solana.com](https://faucet.solana.com)) and devnet USDC ([faucet.circle.com](https://faucet.circle.com), *Solana Devnet*).
 4. **Profile** tab → connect your wallet. **Discover** tab → pick a creator → **Send a tip** → sign in Phantom.
@@ -165,23 +168,38 @@ To enable boosts, set the `TSKR_MINT` secret on the `record-tip` Edge Function.
 
 | Feature | Status |
 |---|---|
-| Wallet connection, SOL / USDC balances | ✅ |
-| Supabase database, read-only from the app | ✅ |
-| Creator page publishing by signature | ✅ tested with Phantom |
+| Wallet connection (Mobile Wallet Adapter 2.0), SOL / USDC balances | ✅ |
 | **End-to-end USDC tip** (Phantom signature → on-chain → verified → recorded) | ✅ [tested on a real phone](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet) |
-| On-chain tip verification (`record-tip`) | ✅ |
-| Support wall, creator space, loyalty tiers, weekly streaks | ✅ |
-| Interface in 4 languages (EN, FR, ES, PT-BR), remembered choice | ✅ |
-| Animated launch screen, new identity and app icon | ✅ |
-| `tipstreak://` deep links | ✅ implemented |
-| SKR boost | 🛠️ implemented (app + on-chain verification), not yet tested: needs the TSKR devnet test token |
+| On-chain verification of every tip (`record-tip`), read-only database from the app | ✅ |
+| **SKR boost to the creator**, in the same transaction as the tip | ✅ tested on devnet (TSKR test token) |
+| **Optional contribution to TipStreak** (+5%), in the same transaction | ✅ tested on devnet |
+| Creator pages and **profile photos**, signed by the creator's wallet | ✅ tested with Phantom |
+| Support wall, creator space, loyalty tiers, weekly streaks, history | ✅ |
+| **Live tip confirmation**: animated logo, soft chime, haptics; in-app dialogs in the app's style | ✅ |
+| Interface in **4 languages** (EN, FR, ES, PT-BR), follows the phone, remembered choice | ✅ |
+| Animated launch screen, brand identity and app icon | ✅ |
+| `tipstreak://` deep links | ✅ |
+| Tested by real users on their own Android phones and wallets | ✅ 3 testers |
+| Hackathon security audit answered ([SECURITY.md](SECURITY.md)) | ✅ |
+
+## Business model
+
+Creators always receive **100% of their tips and boosts**. TipStreak earns from optional services:
+- **Live:** an optional "Support TipStreak" +5% when tipping, off by default (the GoFundMe model).
+- **Next:** tip with any token (SOL, BONK…): a Jupiter swap lands USDC in the creator's wallet, with a small fee on the swap only.
+- **Next:** **sponsored tips**: a brand matches tips in a category for a week ("[Brand] doubles your music tips").
+  The ad budget goes to creators instead of interrupting them, and TipStreak takes a campaign fee. No banner ads in the app.
+- **Later:** Creator Pro (perks per loyalty tier, supporter analytics, custom page) and a stream overlay for live creators.
 
 ## Roadmap
 
-- **Pay with any token**: Jupiter swap (mainnet) straight into the creator's USDC account,
-  with a platform fee as a revenue stream.
-- **Mainnet launch**: real SKR token (`SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3`) and mainnet USDC.
-- Profile pictures, creator-defined perks for each tier, `https://` links (App Links).
+- **Mainnet beta** with ~10 real creators: mainnet USDC and the real SKR token (`SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3`),
+  dedicated RPC, treasury on a hardware / multisig wallet, per-tip cap during the beta, security review of the Edge Functions.
+- **Solana dApp Store** listing.
+- **Verified creators** (linked X / YouTube account) before appearing in Discover.
+- **Sponsored network fees**: TipStreak pays the fan's transaction fees, so a tip only needs USDC.
+- **Pay with any token** (Jupiter swap) and **sponsored tips** (see business model).
+- Tip notifications for creators, creator-defined perks for each tier, `https://` creator links (App Links), stream overlay.
 
 ## License
 
