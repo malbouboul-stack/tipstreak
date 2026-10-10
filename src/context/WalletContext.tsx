@@ -46,33 +46,50 @@ async function sendAndConfirm(
   onSent: () => void,
   timeoutMs = 90000
 ): Promise<string> {
+  const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
   const send = () => connection.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 });
-  const signature = await send();
+
+  // Premier envoi : si le RPC est saturé même via le relais, on réessaie quelques fois avant d'abandonner.
+  // La signature d'une transaction est connue d'avance : on peut la suivre même si un envoi a "échoué".
+  let signature: string | null = null;
+  for (let attempt = 0; attempt < 4 && !signature; attempt++) {
+    try {
+      signature = await send();
+    } catch (e) {
+      if (attempt === 3) throw e;
+      await pause(1500 * (attempt + 1));
+    }
+  }
   onSent();
   const deadline = Date.now() + timeoutMs;
   let lastSend = Date.now();
+  let lastHeightCheck = 0;
   while (Date.now() < deadline) {
-    const { value } = await connection.getSignatureStatuses([signature]);
-    const status = value[0];
-    if (status?.err) throw new Error('error.txFailed');
-    if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') return signature;
+    // Requêtes espacées (le RPC public limite les appels) ; une requête refusée n'interrompt pas le suivi
+    try {
+      const status = (await connection.getSignatureStatuses([signature!])).value[0];
+      if (status?.err) throw new Error('error.txFailed');
+      if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') return signature!;
+    } catch (e: any) {
+      if (e?.message === 'error.txFailed') throw e;
+    }
 
-    if (lastValidBlockHeight !== undefined) {
+    if (lastValidBlockHeight !== undefined && Date.now() - lastHeightCheck > 4000) {
+      lastHeightCheck = Date.now();
       const height = await connection.getBlockHeight('confirmed').catch(() => null);
       if (height !== null && height > lastValidBlockHeight) {
         // Dernière vérification : expirée ET jamais exécutée, sinon on ne doit surtout pas la refaire
-        const last = (await connection.getSignatureStatuses([signature], { searchTransactionHistory: true })).value[0];
+        const last = (await connection.getSignatureStatuses([signature!], { searchTransactionHistory: true })).value[0];
         if (last?.err) throw new Error('error.txFailed');
-        if (last?.confirmationStatus === 'confirmed' || last?.confirmationStatus === 'finalized') return signature;
+        if (last?.confirmationStatus === 'confirmed' || last?.confirmationStatus === 'finalized') return signature!;
         throw new Error('error.txExpired');
       }
     }
-    if (Date.now() - lastSend > 1500) {
+    if (Date.now() - lastSend > 3000) {
       lastSend = Date.now();
       send().catch(() => {});
     }
-    // Vérification fréquente : la confirmation s'affiche dès que le réseau la donne
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await pause(1000);
   }
   throw new Error('error.txNotConfirmed');
 }

@@ -11,6 +11,7 @@ const RPC_URL = Deno.env.get('SOLANA_RPC_URL') ?? 'https://api.devnet.solana.com
 const ALLOWED_METHODS = new Set([
   'getAccountInfo',
   'getBalance',
+  'getBlockHeight',
   'getLatestBlockhash',
   'getParsedTokenAccountsByOwner',
   'getSignatureStatuses',
