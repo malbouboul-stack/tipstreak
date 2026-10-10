@@ -177,12 +177,20 @@ export default function TipScreen() {
           )}
 
           <GradientButton
-            label={sending ? t('tip.sending') : t('tip.confirm', { amount: finalAmount })}
+            label={
+              success?.phase === 'preparing'
+                ? t('tip.phasePreparing')
+                : success?.phase === 'signing'
+                  ? t('tip.phaseWallet')
+                  : sending
+                    ? t('tip.sending')
+                    : t('tip.confirm', { amount: finalAmount })
+            }
             style={{ marginTop: 'auto' }}
             disabled={!finalAmount || sending || notEnoughUsdc || noSol}
             onPress={async () => {
               setSending(true);
-              // La carte s'ouvre dès l'appui : son logo se remplit au rythme réel de la transaction
+              // Suivi des étapes ; la carte animée ne s'affiche qu'au retour du wallet (cf. TipSuccessModal plus bas)
               setSuccess({ amount: finalAmount, boosted, contributed: contribution > 0, phase: 'preparing' });
               try {
                 // Tip, boost et contribution éventuels partent dans une seule transaction (une seule signature)
@@ -222,8 +230,10 @@ export default function TipScreen() {
           />
         </View>
       </KeyboardAvoidingView>
+      {/* Aucune fenêtre de l'app n'est ouverte pendant que le wallet est au premier plan : la carte apparaît
+          au retour de Phantom (envoi au réseau), comme dans la version de référence de la connexion wallet */}
       <TipSuccessModal
-        visible={success !== null}
+        visible={success !== null && success.phase !== 'preparing' && success.phase !== 'signing'}
         amount={success?.amount ?? 0}
         creatorName={creator.name}
         boosted={success?.boosted ?? false}

@@ -119,10 +119,10 @@ const WalletContext = createContext<WalletContextType>({
   signMessage: async () => new Uint8Array(),
 });
 
-// Connexion mémorisée sur le téléphone : l'adresse publique et le jeton d'autorisation Mobile Wallet Adapter
-// (pas de clé privée). Android peut fermer l'app en arrière-plan : au retour, on reste connecté.
+// Connexion mémorisée sur le téléphone : seulement l'adresse publique du wallet (aucune clé, aucun jeton).
+// Android peut fermer l'app en arrière-plan : au retour, on reste connecté.
 const SESSION_KEY = 'tipstreak.wallet';
-type StoredSession = { publicKey: string; authToken: string | null };
+type StoredSession = { publicKey: string };
 
 function loadSession(): StoredSession | null {
   try {
@@ -188,8 +188,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Autorisation Phantom mémorisée : les tips suivants ne redemandent pas "Connecter"
-  const authTokenRef = useRef<string | null>(restored?.authToken ?? null);
+  // Jeton d'autorisation de la session en cours uniquement : un jeton gardé d'un lancement à l'autre
+  // n'apportait rien (Phantom redemande "Connecter" aux apps non vérifiées) et pouvait faire échouer la session.
+  const authTokenRef = useRef<string | null>(null);
 
   // (Ré)autorise l'app dans une session wallet ouverte. Si l'autorisation mémorisée n'est plus
   // valable (révoquée dans Phantom…), on redemande une autorisation normale.
@@ -208,7 +209,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     authTokenRef.current = result.auth_token;
     const address = new PublicKey(Buffer.from(result.accounts[0].address, 'base64')).toBase58();
-    saveSession({ publicKey: address, authToken: result.auth_token });
+    saveSession({ publicKey: address });
     return address;
   };
 
