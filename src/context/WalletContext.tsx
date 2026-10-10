@@ -31,16 +31,53 @@ const connection = new Connection(clusterApiUrl('devnet'), { commitment: 'confir
 // Identité présentée à Phantom lors de la demande d'autorisation
 const APP_IDENTITY = { name: 'TipStreak', uri: 'https://tipstreak.app', icon: 'favicon.ico' };
 
-// Attend que la transaction soit confirmée. Sans ça, le solde affiché et l'Edge Function
-// record-tip peuvent encore voir l'état d'avant l'envoi.
-async function waitForConfirmation(signature: string, timeoutMs = 30000): Promise<void> {
+// Envoie une transaction signée (APRÈS le retour du wallet) et attend sa confirmation. Sans attendre,
+// le solde affiché et l'Edge Function record-tip pourraient encore voir l'état d'avant l'envoi.
+// - Pas de simulation préalable (skipPreflight) : sur devnet, le nœud qui simule est parfois en retard et
+//   répond "Blockhash not found" pour une transaction valide. Les vraies erreurs restent vues (status.err).
+// - Renvoyée régulièrement tant qu'elle n'est pas confirmée : sans risque, Solana ne l'exécute qu'une fois.
+// - Requêtes espacées (le RPC public limite les appels) ; une requête refusée n'interrompt pas le suivi,
+//   et fetchWithRetry bascule sur le relais Supabase si le RPC public répond "429 saturé".
+async function sendAndConfirm(raw: Buffer, lastValidBlockHeight: number | undefined, timeoutMs = 90000): Promise<string> {
+  const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const send = () => connection.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 });
+
+  let signature: string | null = null;
+  for (let attempt = 0; attempt < 4 && !signature; attempt++) {
+    try {
+      signature = await send();
+    } catch (e) {
+      if (attempt === 3) throw e;
+      await pause(1500 * (attempt + 1));
+    }
+  }
   const deadline = Date.now() + timeoutMs;
+  let lastSend = Date.now();
+  let lastHeightCheck = 0;
   while (Date.now() < deadline) {
-    const { value } = await connection.getSignatureStatuses([signature]);
-    const status = value[0];
-    if (status?.err) throw new Error('error.txFailed');
-    if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') return;
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const status = (await connection.getSignatureStatuses([signature!])).value[0];
+      if (status?.err) throw new Error('error.txFailed');
+      if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') return signature!;
+    } catch (e: any) {
+      if (e?.message === 'error.txFailed') throw e;
+    }
+    if (lastValidBlockHeight !== undefined && Date.now() - lastHeightCheck > 4000) {
+      lastHeightCheck = Date.now();
+      const height = await connection.getBlockHeight('confirmed').catch(() => null);
+      if (height !== null && height > lastValidBlockHeight) {
+        // Expirée ET jamais exécutée : rien n'a été débité
+        const last = (await connection.getSignatureStatuses([signature!], { searchTransactionHistory: true })).value[0];
+        if (last?.err) throw new Error('error.txFailed');
+        if (last?.confirmationStatus === 'confirmed' || last?.confirmationStatus === 'finalized') return signature!;
+        throw new Error('error.txExpired');
+      }
+    }
+    if (Date.now() - lastSend > 3000) {
+      lastSend = Date.now();
+      send().catch(() => {});
+    }
+    await pause(1000);
   }
   throw new Error('error.txNotConfirmed');
 }
@@ -161,7 +198,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     const [recipientAtaInfos, latestBlockhash] = await Promise.all([
       Promise.all(accounts.map(({ recipientAta }) => connection.getAccountInfo(recipientAta))),
-      connection.getLatestBlockhash(),
+      // "finalized" : un peu plus ancien, déjà connu de tous les nœuds (dont celui du wallet)
+      connection.getLatestBlockhash('finalized'),
     ]);
 
     const instructions: TransactionInstruction[] = [];
@@ -212,8 +250,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       return signedTransaction;
     });
     // Renvoyer une transaction déjà signée est sans risque : Solana la reconnaît (même signature)
-    const signature = await connection.sendRawTransaction(signed.serialize(), { maxRetries: 5 });
-    await waitForConfirmation(signature);
+    const signature = await sendAndConfirm(signed.serialize(), transaction.lastValidBlockHeight);
     return signature;
   };
 
