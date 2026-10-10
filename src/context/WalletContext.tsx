@@ -239,15 +239,38 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (balance < amountSkr) throw new Error('error.notEnoughSkr');
   };
 
+  // Ouvre une session wallet sur le compte connecté. Si le wallet renvoie un AUTRE compte (compte changé
+  // dans Phantom), on ne signe rien de ce qui a été préparé pour l'ancien : l'app bascule sur le nouveau
+  // compte, recharge ses soldes, et l'utilisateur relance l'action (qui sera alors préparée pour lui).
+  const withWallet = async <T,>(action: (wallet: Web3MobileWallet) => Promise<T>): Promise<T> => {
+    let switchedTo: string | null = null;
+    try {
+      return await transact(async (wallet: Web3MobileWallet) => {
+        const address = await authorize(wallet);
+        if (address !== publicKey) {
+          switchedTo = address;
+          throw new Error('error.walletChanged');
+        }
+        return action(wallet);
+      });
+    } catch (e) {
+      if (switchedTo) {
+        setPublicKey(switchedTo);
+        setSolBalance(null);
+        setUsdcBalance(null);
+        refreshBalances(switchedTo);
+      }
+      throw e;
+    }
+  };
+
   // Phantom ne fait que SIGNER la transaction déjà prête ; c'est l'app qui l'envoie ensuite.
   // Si Phantom l'envoyait lui-même, il dépendrait de son propre accès réseau : quand il échoue,
   // Phantom reste bloqué sans revenir à l'app. L'app, elle, a ses nouvelles tentatives et son relais.
   // `onProgress` : chaque étape réelle est signalée, pour que l'écran avance au rythme de la transaction.
   const signAndSend = async (transaction: Transaction, onProgress?: (step: TxStep) => void): Promise<string> => {
     onProgress?.('signing');
-    const signed = await transact(async (wallet: Web3MobileWallet) => {
-      const address = await authorize(wallet);
-      if (address !== publicKey) throw new Error('error.walletChanged');
+    const signed = await withWallet(async (wallet) => {
       const [signedTransaction] = await wallet.signTransactions({ transactions: [transaction] });
       return signedTransaction;
     });
@@ -299,9 +322,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const payload = Buffer.from(message, 'utf-8');
     const addressBase64 = Buffer.from(new PublicKey(publicKey).toBytes()).toString('base64');
 
-    return transact(async (wallet: Web3MobileWallet) => {
-      const address = await authorize(wallet);
-      if (address !== publicKey) throw new Error('error.walletChanged');
+    return withWallet(async (wallet) => {
       const [signedPayload] = await wallet.signMessages({ addresses: [addressBase64], payloads: [payload] });
       return signedPayload;
     });
