@@ -10,7 +10,7 @@ weekly badges. Creators publish their page by signing with their wallet and rece
 
 > Built for the Solana Mobile hackathon. Runs on **Solana devnet**.
 >
-> 📲 **Download the Android APK:** [TipStreak (preview)](https://expo.dev/artifacts/eas/84d5lQdM_XLrP88TFfpfU-XtBDFJLtBttzerTOs9G3Q.apk) · 🎬 [Demo video](https://www.youtube.com/watch?v=76yhvYfAuUM)
+> 📲 **Download the Android APK:** [TipStreak (preview)](https://expo.dev/artifacts/eas/4F4o-JjzjsYsucN2bH8q3RfsoeBQnveFsAE7dsRRMFE.apk) · 🎬 [Demo video](https://www.youtube.com/watch?v=76yhvYfAuUM)
 > · ⛓️ First real tip, verified on-chain: [view on Solana Explorer](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet)
 
 ## Features
@@ -102,7 +102,7 @@ supabase/
 ## Try the app
 
 1. Install the **TipStreak (preview)** APK on an Android phone:
-   [direct APK download](https://expo.dev/artifacts/eas/84d5lQdM_XLrP88TFfpfU-XtBDFJLtBttzerTOs9G3Q.apk).
+   [direct APK download](https://expo.dev/artifacts/eas/4F4o-JjzjsYsucN2bH8q3RfsoeBQnveFsAE7dsRRMFE.apk).
 2. Install **Phantom** and turn on **Testnet mode** (Settings → Developer settings), network **Solana Devnet**.
 3. Get devnet SOL ([faucet.solana.com](https://faucet.solana.com)) and devnet USDC ([faucet.circle.com](https://faucet.circle.com), *Solana Devnet*).
 4. **Profile** tab → connect your wallet. **Discover** tab → pick a creator → **Send a tip** → sign in Phantom.
