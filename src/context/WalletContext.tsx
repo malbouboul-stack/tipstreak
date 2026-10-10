@@ -208,9 +208,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       result = await wallet.authorize({ chain: 'solana:devnet', identity: APP_IDENTITY });
     }
     authTokenRef.current = result.auth_token;
-    const address = new PublicKey(Buffer.from(result.accounts[0].address, 'base64')).toBase58();
-    saveSession({ publicKey: address });
-    return address;
+    // Rien d'autre ici : on est DANS la session wallet (app en pause). La connexion est mémorisée
+    // une fois revenu dans l'app (connect, withWallet).
+    return new PublicKey(Buffer.from(result.accounts[0].address, 'base64')).toBase58();
   };
 
   // Prépare la transaction AVANT d'ouvrir le wallet : toutes les requêtes réseau sont faites ici.
@@ -291,6 +291,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       if (switchedTo) {
         setPublicKey(switchedTo);
+        saveSession({ publicKey: switchedTo });
         setSolBalance(null);
         setUsdcBalance(null);
         refreshBalances(switchedTo);
@@ -322,6 +323,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       const address = await transact((wallet: Web3MobileWallet) => authorize(wallet));
       setPublicKey(address);
+      saveSession({ publicKey: address });
       // Une fois revenu dans l'app (Phantom fermé) : le réseau est alors pleinement disponible
       await refreshBalances(address);
     } catch (e: any) {
