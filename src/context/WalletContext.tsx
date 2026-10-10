@@ -306,6 +306,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const signAndSend = async (transaction: Transaction, onProgress?: (step: TxStep) => void): Promise<string> => {
     onProgress?.('signing');
     const signed = await withWallet(async (wallet) => {
+      // Le blockhash ne vit que ~45 s sur devnet, et le wallet peut mettre plusieurs secondes à démarrer :
+      // on le rafraîchit juste avant de demander la signature, pour que ce délai commence maintenant.
+      // Une seule requête, limitée à 2,5 s : si le réseau tarde, on garde le blockhash préparé avant.
+      const fresh = await Promise.race([
+        connection.getLatestBlockhash('finalized'),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
+      ]).catch(() => null);
+      if (fresh) {
+        transaction.recentBlockhash = fresh.blockhash;
+        transaction.lastValidBlockHeight = fresh.lastValidBlockHeight;
+      }
       const [signedTransaction] = await wallet.signTransactions({ transactions: [transaction] });
       return signedTransaction;
     });
