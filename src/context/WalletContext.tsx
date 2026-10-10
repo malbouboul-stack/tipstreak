@@ -59,7 +59,13 @@ async function sendAndConfirm(
 
     if (lastValidBlockHeight !== undefined) {
       const height = await connection.getBlockHeight('confirmed').catch(() => null);
-      if (height !== null && height > lastValidBlockHeight) throw new Error('error.txExpired');
+      if (height !== null && height > lastValidBlockHeight) {
+        // Dernière vérification : expirée ET jamais exécutée, sinon on ne doit surtout pas la refaire
+        const last = (await connection.getSignatureStatuses([signature], { searchTransactionHistory: true })).value[0];
+        if (last?.err) throw new Error('error.txFailed');
+        if (last?.confirmationStatus === 'confirmed' || last?.confirmationStatus === 'finalized') return signature;
+        throw new Error('error.txExpired');
+      }
     }
     if (Date.now() - lastSend > 1500) {
       lastSend = Date.now();
@@ -72,8 +78,9 @@ async function sendAndConfirm(
 }
 
 type SplTransfer = { mint: PublicKey; decimals: number; recipient: PublicKey; amount: number };
-// Étapes d'un envoi : signature dans le wallet, envoi au réseau, attente de confirmation
-export type TxStep = 'signing' | 'sending' | 'confirming';
+// Étapes d'un envoi : préparation (ou nouvelle préparation si la 1re a expiré), signature dans le wallet,
+// envoi au réseau, attente de confirmation
+export type TxStep = 'preparing' | 'signing' | 'sending' | 'confirming';
 export type TipOptions = {
   message?: string;
   boostSkr?: number;
@@ -223,7 +230,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     const [recipientAtaInfos, latestBlockhash] = await Promise.all([
       Promise.all(accounts.map(({ recipientAta }) => connection.getAccountInfo(recipientAta))),
-      connection.getLatestBlockhash(),
+      // Blockhash "finalized" (un peu plus ancien) plutôt que le tout dernier : le RPC du wallet, parfois en retard
+      // sur le nôtre, le connaît déjà et peut simuler la transaction tout de suite. Avec le tout dernier,
+      // Phantom gardait son bouton Confirmer grisé jusqu'à le voir, et la transaction finissait par expirer.
+      connection.getLatestBlockhash('finalized'),
     ]);
 
     const instructions: TransactionInstruction[] = [];
@@ -332,7 +342,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (contributionUsdc > 0) {
       transfers.push({ mint: DEVNET_USDC_MINT, decimals: USDC_DECIMALS, recipient: TREASURY, amount: contributionUsdc });
     }
-    return signAndSend(await buildTransaction(transfers, message), onProgress);
+    try {
+      return await signAndSend(await buildTransaction(transfers, message), onProgress);
+    } catch (e: any) {
+      // Expirée sans avoir été exécutée (vérifié dans sendAndConfirm) : on la refait une fois avec un
+      // blockhash neuf, le wallet redemande simplement une validation. Aucun risque de payer deux fois.
+      if (e?.message !== 'error.txExpired') throw e;
+      onProgress?.('preparing');
+      return signAndSend(await buildTransaction(transfers, message), onProgress);
+    }
   };
 
   // Signature d'un simple message (gratuit, aucune transaction) : prouve qu'on possède le wallet.
