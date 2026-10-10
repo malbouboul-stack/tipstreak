@@ -11,7 +11,7 @@ et reçoivent les tips directement dessus.
 
 > Projet réalisé pour le hackathon Solana Mobile. Tourne sur **Solana devnet**.
 >
-> 📲 **Télécharger l'APK Android :** [TipStreak (preview)](https://expo.dev/artifacts/eas/Lg17n8clN8FWtenPheJRpCWh031J-d7ylElnMQULz9w.apk) · 🎬 [Vidéo de démo](https://www.youtube.com/watch?v=76yhvYfAuUM)
+> 📲 **Télécharger l'APK Android :** [TipStreak (preview)](https://expo.dev/artifacts/eas/yajNnTtkIVfpweiTTj88xzgD4qGY341LXqhK5v4Fg0c.apk) · 🎬 [Vidéo de démo](https://www.youtube.com/watch?v=76yhvYfAuUM)
 > · ⛓️ Premier vrai tip, vérifié on-chain : [voir sur Solana Explorer](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet)
 
 ## Fonctionnalités
@@ -104,7 +104,7 @@ supabase/
 ## Tester l'app
 
 1. Installer l'APK **TipStreak (preview)** sur un téléphone Android :
-   [téléchargement direct de l'APK](https://expo.dev/artifacts/eas/Lg17n8clN8FWtenPheJRpCWh031J-d7ylElnMQULz9w.apk).
+   [téléchargement direct de l'APK](https://expo.dev/artifacts/eas/yajNnTtkIVfpweiTTj88xzgD4qGY341LXqhK5v4Fg0c.apk).
 2. Installer **Phantom** et activer le **mode Testnet** (Paramètres → Paramètres pour développeurs), réseau **Solana Devnet**.
 3. Obtenir du SOL devnet ([faucet.solana.com](https://faucet.solana.com)) et de l'USDC devnet ([faucet.circle.com](https://faucet.circle.com), *Solana Devnet*).
 4. Onglet **Profil** → connecter le wallet. Onglet **Découvrir** → choisir un créateur → **Envoyer un tip** → signer dans Phantom.
