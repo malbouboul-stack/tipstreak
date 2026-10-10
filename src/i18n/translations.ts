@@ -161,6 +161,8 @@ export const fr = {
   'profile.photoChange': 'Changer',
   'profile.photoUpdated': 'Photo mise à jour 🎉',
   'profile.photoFailed': 'Photo non envoyée',
+  'profile.linksTitle': 'Tes liens (réseaux, site…)',
+  'profile.linkPlaceholder': 'x.com/ton_compte, youtube.com/@toi…',
 
   // Erreurs (wallet, réseau, serveur)
   'error.noWalletApp': 'Aucun wallet compatible trouvé sur ce téléphone (installe Phantom ou Solflare).',
@@ -182,6 +184,7 @@ export const fr = {
   'error.imageTooLarge': 'Image trop lourde (500 Ko max)',
   'error.imageFormat': 'Format d\'image non pris en charge',
   'error.noCreatorPage': 'Aucune page créateur pour ce wallet',
+  'error.linkInvalid': "Un lien n'est pas valide (https:// obligatoire)",
   'error.handleFormat': 'Handle : 3 à 30 caractères, lettres minuscules, chiffres ou _',
   'error.handleReserved': 'Ce handle est réservé',
   'error.handleTaken': 'Ce handle est déjà pris, choisis-en un autre',
@@ -342,6 +345,8 @@ export const en: Record<TranslationKey, string> = {
   'profile.photoChange': 'Change',
   'profile.photoUpdated': 'Photo updated 🎉',
   'profile.photoFailed': 'Photo not uploaded',
+  'profile.linksTitle': 'Your links (socials, website…)',
+  'profile.linkPlaceholder': 'x.com/your_account, youtube.com/@you…',
 
   'error.noWalletApp': 'No compatible wallet found on this phone (install Phantom or Solflare).',
   'error.connectFailed': 'Wallet connection cancelled or failed.',
@@ -362,6 +367,7 @@ export const en: Record<TranslationKey, string> = {
   'error.imageTooLarge': 'Image too large (500 KB max)',
   'error.imageFormat': 'Unsupported image format',
   'error.noCreatorPage': 'No creator page for this wallet',
+  'error.linkInvalid': 'A link is not valid (https:// required)',
   'error.handleFormat': 'Handle: 3 to 30 characters, lowercase letters, digits or _',
   'error.handleReserved': 'This handle is reserved',
   'error.handleTaken': 'This handle is already taken, pick another one',
@@ -520,6 +526,8 @@ export const es: Record<TranslationKey, string> = {
   'profile.photoChange': 'Cambiar',
   'profile.photoUpdated': 'Foto actualizada 🎉',
   'profile.photoFailed': 'Foto no subida',
+  'profile.linksTitle': 'Tus enlaces (redes, web…)',
+  'profile.linkPlaceholder': 'x.com/tu_cuenta, youtube.com/@tu…',
 
   'error.noWalletApp': 'No se encontró ningún wallet compatible en este teléfono (instala Phantom o Solflare).',
   'error.connectFailed': 'Conexión con el wallet cancelada o fallida.',
@@ -540,6 +548,7 @@ export const es: Record<TranslationKey, string> = {
   'error.imageTooLarge': 'Imagen demasiado pesada (500 KB máx.)',
   'error.imageFormat': 'Formato de imagen no compatible',
   'error.noCreatorPage': 'No hay página de creador para este wallet',
+  'error.linkInvalid': 'Un enlace no es válido (https:// obligatorio)',
   'error.handleFormat': 'Handle: de 3 a 30 caracteres, minúsculas, números o _',
   'error.handleReserved': 'Este handle está reservado',
   'error.handleTaken': 'Este handle ya está en uso, elige otro',
@@ -698,6 +707,8 @@ export const pt: Record<TranslationKey, string> = {
   'profile.photoChange': 'Trocar',
   'profile.photoUpdated': 'Foto atualizada 🎉',
   'profile.photoFailed': 'Foto não enviada',
+  'profile.linksTitle': 'Seus links (redes, site…)',
+  'profile.linkPlaceholder': 'x.com/sua_conta, youtube.com/@voce…',
 
   'error.noWalletApp': 'Nenhuma carteira compatível encontrada neste celular (instale Phantom ou Solflare).',
   'error.connectFailed': 'Conexão com a carteira cancelada ou com falha.',
@@ -718,6 +729,7 @@ export const pt: Record<TranslationKey, string> = {
   'error.imageTooLarge': 'Imagem pesada demais (500 KB no máx.)',
   'error.imageFormat': 'Formato de imagem não suportado',
   'error.noCreatorPage': 'Nenhuma página de criador para esta carteira',
+  'error.linkInvalid': 'Um link não é válido (https:// obrigatório)',
   'error.handleFormat': 'Handle: de 3 a 30 caracteres, letras minúsculas, números ou _',
   'error.handleReserved': 'Este handle é reservado',
   'error.handleTaken': 'Este handle já está em uso, escolha outro',

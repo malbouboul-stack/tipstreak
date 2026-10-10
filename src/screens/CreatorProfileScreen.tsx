@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Share, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,8 @@ import { getCreatorLink, useData } from '../context/DataContext';
 import { useWallet } from '../context/WalletContext';
 import { useCreatorTips } from '../data/useCreatorTips';
 import SupportWall from '../components/SupportWall';
+import SocialLinks from '../components/SocialLinks';
+import PhotoViewer from '../components/PhotoViewer';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { RootStackParamList } from '../../App';
 
@@ -24,6 +26,7 @@ export default function CreatorProfileScreen() {
   const relation = creator ? getSupportRelation(creator.id) : undefined;
   const { publicKey } = useWallet();
   const { tips, loading: tipsLoading, fetchedAt } = useCreatorTips(creator?.id);
+  const [photoOpen, setPhotoOpen] = useState(false);
 
   // Ouvert par un lien profond au démarrage : les créateurs sont encore en chargement
   if (!creator && loading) {
@@ -111,9 +114,16 @@ export default function CreatorProfileScreen() {
         />
 
         <View style={styles.head}>
-          <View style={styles.avatarWrap}>
+          <TouchableOpacity
+            style={styles.avatarWrap}
+            onPress={() => setPhotoOpen(true)}
+            disabled={!creator.avatarUrl}
+            activeOpacity={0.85}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={creator.name}
+          >
             <Avatar seed={creator.handle} initial={creator.initial} uri={creator.avatarUrl} size={72} ring />
-          </View>
+          </TouchableOpacity>
           <Text style={styles.name}>{creator.name}</Text>
           <Text style={styles.cat}>{creator.category}</Text>
           <Text style={styles.link}>🔗 {link} · {t('creator.linkShared')}</Text>
@@ -135,6 +145,7 @@ export default function CreatorProfileScreen() {
         </View>
 
         <Text style={styles.bio}>{creator.bio}</Text>
+        <SocialLinks links={creator.links} />
 
         <Text style={styles.sectionLabel}>{t('creator.wall')}</Text>
         <View style={{ marginBottom: 16 }}>
@@ -172,6 +183,7 @@ export default function CreatorProfileScreen() {
           </>
         )}
       </ScrollView>
+      <PhotoViewer uri={photoOpen ? creator.avatarUrl : null} name={creator.name} onClose={() => setPhotoOpen(false)} />
     </SafeAreaView>
   );
 }

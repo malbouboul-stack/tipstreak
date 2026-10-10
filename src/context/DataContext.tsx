@@ -13,6 +13,7 @@ export type Creator = {
   bio: string;
   walletAddress: string;
   avatarUrl: string | null; // photo de profil (Supabase Storage), sinon initiale
+  links: string[]; // liens publics : réseaux sociaux, site…
   supporters: number;
   totalReceived: number;
 };
@@ -43,7 +44,7 @@ type DataContextType = {
   uploadAvatar: (jpegBase64: string) => Promise<void>; // photo JPEG 512 × 512 déjà préparée
 };
 
-export type CreatorProfileInput = { handle: string; name: string; category: string; bio: string };
+export type CreatorProfileInput = { handle: string; name: string; category: string; bio: string; links: string[] };
 
 // ⚠️ Doit produire exactement le même texte que buildMessage() dans
 // supabase/functions/register-creator/index.ts, sinon la signature sera refusée
@@ -55,6 +56,7 @@ function buildCreatorMessage(p: CreatorProfileInput & { wallet: string; issuedAt
     `Nom : ${p.name}`,
     `Catégorie : ${p.category}`,
     `Bio : ${p.bio}`,
+    `Liens : ${p.links.join(' | ')}`,
     `Date : ${p.issuedAt}`,
   ].join('\n');
 }
@@ -87,6 +89,7 @@ type CreatorRow = {
   bio: string;
   wallet_address: string;
   avatar_url: string | null;
+  links: string[] | null;
   supporters: number;
   total_received: number;
 };
@@ -110,6 +113,7 @@ function toCreator(row: CreatorRow): Creator {
     bio: row.bio,
     walletAddress: row.wallet_address,
     avatarUrl: row.avatar_url ?? null,
+    links: row.links ?? [],
     supporters: row.supporters,
     totalReceived: Number(row.total_received),
   };
@@ -198,6 +202,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         name: input.name.trim(),
         category: input.category.trim(),
         bio: input.bio.trim(),
+        links: input.links,
         issuedAt: new Date().toISOString(),
       };
       const signedPayload = await signMessage(buildCreatorMessage(profile));

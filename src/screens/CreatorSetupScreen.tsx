@@ -8,6 +8,7 @@ import SupportWall from '../components/SupportWall';
 import LanguagePicker from '../components/LanguagePicker';
 import AvatarPicker from '../components/AvatarPicker';
 import { useDialog } from '../components/Dialog';
+import { MAX_LINKS, normalizeLink } from '../lib/socialLinks';
 import { useWallet, shortenAddress } from '../context/WalletContext';
 import { getCreatorLink, useData } from '../context/DataContext';
 import { useCreatorTips } from '../data/useCreatorTips';
@@ -28,6 +29,7 @@ export default function CreatorSetupScreen() {
   const [displayName, setDisplayName] = useState('');
   const [category, setCategory] = useState('');
   const [bio, setBio] = useState('');
+  const [links, setLinks] = useState<string[]>([]); // texte saisi, normalisé à la publication
   const [publishing, setPublishing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -49,16 +51,27 @@ export default function CreatorSetupScreen() {
       setDisplayName(myCreator.name);
       setCategory(myCreator.category);
       setBio(myCreator.bio);
+      setLinks(myCreator.links);
     }
     setIsCreator(!isCreator);
   };
 
   const handleValid = HANDLE.test(handle);
+  // Liens : champs remplis + un champ vide pour en ajouter (4 au maximum)
+  const filledLinks = links.filter((l) => l.trim());
+  const linkFields = filledLinks.length < MAX_LINKS ? [...filledLinks, ''] : filledLinks;
+  const normalizedLinks = filledLinks.map(normalizeLink);
+  const linksValid = normalizedLinks.every((l) => l !== null);
+  const updateLink = (index: number, value: string) => {
+    const next = [...linkFields];
+    next[index] = value;
+    setLinks(next.filter((l) => l.trim()));
+  };
 
   const onPublish = async () => {
     setPublishing(true);
     try {
-      const creator = await publishCreator({ handle, name: displayName, category, bio });
+      const creator = await publishCreator({ handle, name: displayName, category, bio, links: normalizedLinks as string[] });
       setIsCreator(false); // la page est en ligne : on replie le formulaire, le tableau de bord prend le relais
       showDialog({
         title: myCreator ? t('profile.updatedTitle') : t('profile.publishedTitle'),
@@ -243,10 +256,31 @@ export default function CreatorSetupScreen() {
               />
             </View>
 
+            <Text style={styles.sectionLabel}>{t('profile.linksTitle')}</Text>
+            {linkFields.map((value, index) => {
+              const invalid = value.trim() !== '' && normalizeLink(value) === null;
+              return (
+                <View key={index} style={[styles.field, invalid && styles.fieldInvalid]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('profile.linkPlaceholder')}
+                    placeholderTextColor={colors.textFaint}
+                    value={value}
+                    onChangeText={(text) => updateLink(index, text)}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                    maxLength={200}
+                  />
+                </View>
+              );
+            })}
+            {!linksValid && <Text style={styles.fieldHint}>{t('error.linkInvalid')}</Text>}
+
             <GradientButton
               label={publishing ? t('profile.signing') : myCreator ? t('profile.update') : t('profile.publish')}
               style={{ marginTop: 'auto' }}
-              disabled={!publicKey || !handleValid || !displayName.trim() || !category.trim() || publishing}
+              disabled={!publicKey || !handleValid || !displayName.trim() || !category.trim() || !linksValid || publishing}
               onPress={onPublish}
             />
             <Text style={styles.previewNote}>
@@ -318,5 +352,6 @@ const styles = StyleSheet.create({
     borderRadius: 16, paddingHorizontal: 16, marginBottom: 12, justifyContent: 'center',
   },
   input: { color: colors.text, fontFamily: fonts.body, fontSize: 14, paddingVertical: 14 },
+  fieldInvalid: { borderColor: 'rgba(255,107,107,0.6)' },
   previewNote: { color: colors.textFaint, fontFamily: fonts.body, fontSize: 11, textAlign: 'center', marginTop: 10 },
 });

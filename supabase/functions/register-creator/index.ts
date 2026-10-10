@@ -12,6 +12,10 @@ import bs58 from 'npm:bs58@6';
 const MAX_MESSAGE_AGE_MS = 10 * 60 * 1000; // une signature n'est valable que 10 minutes
 const HANDLE = /^[a-z0-9_]{3,30}$/;
 const RESERVED_HANDLES = ['soutiens', 'historique', 'profil']; // chemins des onglets (liens profonds)
+// Liens publics du créateur : mêmes règles que src/lib/socialLinks.ts
+const MAX_LINKS = 4;
+const MAX_LINK_LENGTH = 200;
+const VALID_LINK = /^https:\/\/[^\s/$.?#][^\s]*$/i;
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -25,7 +29,15 @@ class HttpError extends Error {
   }
 }
 
-type Profile = { wallet: string; handle: string; name: string; category: string; bio: string; issuedAt: string };
+type Profile = {
+  wallet: string;
+  handle: string;
+  name: string;
+  category: string;
+  bio: string;
+  links: string[] | null; // null : ancienne version de l'app, qui ne gère pas les liens (on n'y touche pas)
+  issuedAt: string;
+};
 
 // ⚠️ Doit produire exactement le même texte que buildCreatorMessage() dans src/context/DataContext.tsx
 function buildMessage(p: Profile): string {
@@ -36,6 +48,7 @@ function buildMessage(p: Profile): string {
     `Nom : ${p.name}`,
     `Catégorie : ${p.category}`,
     `Bio : ${p.bio}`,
+    ...(p.links ? [`Liens : ${p.links.join(' | ')}`] : []),
     `Date : ${p.issuedAt}`,
   ].join('\n');
 }
@@ -57,6 +70,17 @@ function extractSignature(signed: Uint8Array, message: Uint8Array): Uint8Array {
     return signed.slice(0, nacl.sign.signatureLength);
   }
   throw new HttpError(400, 'Signature illisible');
+}
+
+function readLinks(value: unknown): string[] | null {
+  if (value === undefined) return null;
+  if (!Array.isArray(value) || value.length > MAX_LINKS) throw new HttpError(400, "Un lien n'est pas valide (https:// obligatoire)");
+  for (const link of value) {
+    if (typeof link !== 'string' || link.length > MAX_LINK_LENGTH || !VALID_LINK.test(link)) {
+      throw new HttpError(400, "Un lien n'est pas valide (https:// obligatoire)");
+    }
+  }
+  return value as string[];
 }
 
 function readString(body: Record<string, unknown>, key: string, max: number, min = 1): string {
@@ -83,6 +107,7 @@ Deno.serve(async (req) => {
       name: readString(body, 'name', 50),
       category: readString(body, 'category', 50),
       bio: readString(body, 'bio', 280, 0),
+      links: readLinks(body.links),
       issuedAt: readString(body, 'issuedAt', 40),
     };
     if (typeof body.signedPayload !== 'string') throw new HttpError(400, 'signedPayload manquant');
@@ -111,7 +136,13 @@ Deno.serve(async (req) => {
       throw new HttpError(401, 'Signature invalide : ce wallet ne correspond pas');
     }
 
-    const fields = { handle: profile.handle, name: profile.name, category: profile.category, bio: profile.bio };
+    const fields = {
+      handle: profile.handle,
+      name: profile.name,
+      category: profile.category,
+      bio: profile.bio,
+      ...(profile.links ? { links: profile.links } : {}),
+    };
     const { data: existing, error: lookupError } = await supabase
       .from('creators')
       .select('id')
