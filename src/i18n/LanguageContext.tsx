@@ -54,6 +54,7 @@ const ERROR_PATTERNS: [RegExp, TranslationKey][] = [
   [/ne verse rien au bon destinataire/, 'error.wrongRecipient'],
   [/Impossible d'identifier le signataire/, 'error.signerUnknown'],
   [/ (manquant|invalide)$|entre \d+ et \d+ caractères/, 'error.invalidField'],
+  [/Blockhash not found|block height exceeded|has expired/i, 'error.txExpired'],
 ];
 
 export function LanguageProvider({ children }: { children: ReactNode }) {

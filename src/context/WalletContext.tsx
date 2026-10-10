@@ -32,15 +32,39 @@ const connection = new Connection(clusterApiUrl('devnet'), { commitment: 'confir
 // Identité présentée à Phantom lors de la demande d'autorisation
 const APP_IDENTITY = { name: 'TipStreak', uri: 'https://tipstreak.app', icon: 'favicon.ico' };
 
-// Attend que la transaction soit confirmée. Sans ça, le solde affiché et l'Edge Function
-// record-tip peuvent encore voir l'état d'avant l'envoi.
-async function waitForConfirmation(signature: string, timeoutMs = 30000): Promise<void> {
+// Envoie une transaction signée et attend sa confirmation. Sans attendre, le solde affiché et l'Edge Function
+// record-tip pourraient encore voir l'état d'avant l'envoi.
+// - Pas de simulation préalable (skipPreflight) : sur devnet, le nœud qui simule est parfois en retard et
+//   répond "Blockhash not found" pour une transaction pourtant valide. Les erreurs réelles restent détectées
+//   par la confirmation (status.err).
+// - La transaction est renvoyée régulièrement tant qu'elle n'est pas confirmée (un nœud peut la perdre) :
+//   c'est sans risque, Solana la reconnaît à sa signature et ne l'exécute qu'une fois.
+// - Si son blockhash expire avant qu'elle soit incluse, rien n'a été débité : on le dit clairement.
+async function sendAndConfirm(
+  raw: Buffer,
+  lastValidBlockHeight: number | undefined,
+  onSent: () => void,
+  timeoutMs = 90000
+): Promise<string> {
+  const send = () => connection.sendRawTransaction(raw, { skipPreflight: true, maxRetries: 0 });
+  const signature = await send();
+  onSent();
   const deadline = Date.now() + timeoutMs;
+  let lastSend = Date.now();
   while (Date.now() < deadline) {
     const { value } = await connection.getSignatureStatuses([signature]);
     const status = value[0];
     if (status?.err) throw new Error('error.txFailed');
-    if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') return;
+    if (status?.confirmationStatus === 'confirmed' || status?.confirmationStatus === 'finalized') return signature;
+
+    if (lastValidBlockHeight !== undefined) {
+      const height = await connection.getBlockHeight('confirmed').catch(() => null);
+      if (height !== null && height > lastValidBlockHeight) throw new Error('error.txExpired');
+    }
+    if (Date.now() - lastSend > 1500) {
+      lastSend = Date.now();
+      send().catch(() => {});
+    }
     // Vérification fréquente : la confirmation s'affiche dès que le réseau la donne
     await new Promise((resolve) => setTimeout(resolve, 400));
   }
@@ -275,11 +299,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       return signedTransaction;
     });
     onProgress?.('sending');
-    // Renvoyer une transaction déjà signée est sans risque : Solana la reconnaît (même signature)
-    const signature = await connection.sendRawTransaction(signed.serialize(), { maxRetries: 5 });
-    onProgress?.('confirming');
-    await waitForConfirmation(signature);
-    return signature;
+    return sendAndConfirm(signed.serialize(), transaction.lastValidBlockHeight, () => onProgress?.('confirming'));
   };
 
   const connect = async () => {
