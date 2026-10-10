@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { AppState } from 'react-native';
 import { Buffer } from 'buffer';
 import { fetchWithRetry } from '../lib/network';
+import { getItem, setItem } from '../lib/storage';
 import { transact, Web3MobileWallet } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
 import { Connection, PublicKey, LAMPORTS_PER_SOL, Transaction, TransactionInstruction, clusterApiUrl } from '@solana/web3.js';
 import {
@@ -87,8 +88,27 @@ const WalletContext = createContext<WalletContextType>({
   signMessage: async () => new Uint8Array(),
 });
 
+// Connexion mémorisée sur le téléphone : l'adresse publique et le jeton d'autorisation Mobile Wallet Adapter
+// (pas de clé privée). Android peut fermer l'app en arrière-plan : au retour, on reste connecté.
+const SESSION_KEY = 'tipstreak.wallet';
+type StoredSession = { publicKey: string; authToken: string | null };
+
+function loadSession(): StoredSession | null {
+  try {
+    const session = JSON.parse(getItem(SESSION_KEY) ?? 'null');
+    return typeof session?.publicKey === 'string' ? session : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(session: StoredSession | null) {
+  setItem(SESSION_KEY, session ? JSON.stringify(session) : null);
+}
+
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [restored] = useState(loadSession);
+  const [publicKey, setPublicKey] = useState<string | null>(restored?.publicKey ?? null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [solBalance, setSolBalance] = useState<number | null>(null);
@@ -129,8 +149,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, [publicKey, refreshBalances]);
 
-  // Autorisation Phantom mémorisée pour la session : les tips suivants ne redemandent pas "Connecter"
-  const authTokenRef = useRef<string | null>(null);
+  // Connexion retrouvée au démarrage : on recharge les soldes une fois
+  useEffect(() => {
+    if (!restored) return;
+    const frame = requestAnimationFrame(() => refreshBalances(restored.publicKey));
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Autorisation Phantom mémorisée : les tips suivants ne redemandent pas "Connecter"
+  const authTokenRef = useRef<string | null>(restored?.authToken ?? null);
 
   // (Ré)autorise l'app dans une session wallet ouverte. Si l'autorisation mémorisée n'est plus
   // valable (révoquée dans Phantom…), on redemande une autorisation normale.
@@ -148,7 +176,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       result = await wallet.authorize({ chain: 'solana:devnet', identity: APP_IDENTITY });
     }
     authTokenRef.current = result.auth_token;
-    return new PublicKey(Buffer.from(result.accounts[0].address, 'base64')).toBase58();
+    const address = new PublicKey(Buffer.from(result.accounts[0].address, 'base64')).toBase58();
+    saveSession({ publicKey: address, authToken: result.auth_token });
+    return address;
   };
 
   // Prépare la transaction AVANT d'ouvrir le wallet : toutes les requêtes réseau sont faites ici.
@@ -279,6 +309,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = () => {
     authTokenRef.current = null;
+    saveSession(null);
     setPublicKey(null);
     setSolBalance(null);
     setUsdcBalance(null);

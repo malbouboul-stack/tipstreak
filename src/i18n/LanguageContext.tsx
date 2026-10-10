@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
 import { en, es, fr, pt, TranslationKey } from './translations';
+import { getItem, setItem } from '../lib/storage';
 
 export type Language = 'fr' | 'en' | 'es' | 'pt';
 type Params = Record<string, string | number>;
@@ -12,21 +13,8 @@ const LOCALES: Record<Language, string> = { fr: 'fr-FR', en: 'en-US', es: 'es-ES
 const isLanguage = (code: string | null | undefined): code is Language => LANGUAGES.includes(code as Language);
 const STORAGE_KEY = 'tipstreak.language';
 
-type KeyValueStore = { getItemSync(key: string): string | null; setItemSync(key: string, value: string): void };
-
-// expo-sqlite et expo-localization sont des modules natifs : une development build antérieure
-// à leur installation ne les contient pas. On les charge prudemment pour ne pas planter
-// (on perd alors seulement la mémorisation du choix de langue).
-function loadStore(): KeyValueStore | null {
-  try {
-    // require() et non import : un import qui échoue ferait planter tout le bundle
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('expo-sqlite/kv-store').default as KeyValueStore;
-  } catch {
-    return null;
-  }
-}
-
+// expo-localization est un module natif : une development build antérieure à son installation
+// ne le contient pas. On le charge prudemment pour ne pas planter.
 function deviceLanguage(): Language {
   let code: string | null | undefined;
   try {
@@ -40,12 +28,9 @@ function deviceLanguage(): Language {
   return isLanguage(base) ? base : 'en';
 }
 
-function initialLanguage(store: KeyValueStore | null): Language {
-  try {
-    const saved = store?.getItemSync(STORAGE_KEY);
-    if (isLanguage(saved)) return saved;
-  } catch {}
-  return deviceLanguage();
+function initialLanguage(): Language {
+  const saved = getItem(STORAGE_KEY);
+  return isLanguage(saved) ? saved : deviceLanguage();
 }
 
 export function translate(language: Language, key: TranslationKey, params?: Params): string {
@@ -72,18 +57,12 @@ const ERROR_PATTERNS: [RegExp, TranslationKey][] = [
 ];
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [store] = useState(loadStore);
-  const [language, setLanguageState] = useState<Language>(() => initialLanguage(store));
+  const [language, setLanguageState] = useState<Language>(initialLanguage);
 
-  const setLanguage = useCallback(
-    (next: Language) => {
-      setLanguageState(next);
-      try {
-        store?.setItemSync(STORAGE_KEY, next);
-      } catch {}
-    },
-    [store]
-  );
+  const setLanguage = useCallback((next: Language) => {
+    setLanguageState(next);
+    setItem(STORAGE_KEY, next);
+  }, []);
 
   const value = useMemo<LanguageContextType>(() => {
     const t = (key: TranslationKey, params?: Params) => translate(language, key, params);
