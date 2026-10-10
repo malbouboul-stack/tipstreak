@@ -47,7 +47,14 @@ async function waitForConfirmation(signature: string, timeoutMs = 30000): Promis
 }
 
 type SplTransfer = { mint: PublicKey; decimals: number; recipient: PublicKey; amount: number };
-export type TipOptions = { message?: string; boostSkr?: number; contributionUsdc?: number; onSigned?: () => void };
+// Étapes d'un envoi : signature dans le wallet, envoi au réseau, attente de confirmation
+export type TxStep = 'signing' | 'sending' | 'confirming';
+export type TipOptions = {
+  message?: string;
+  boostSkr?: number;
+  contributionUsdc?: number;
+  onProgress?: (step: TxStep) => void;
+};
 
 // Les erreurs levées ici portent une clé de traduction (src/i18n/translations.ts) :
 // les écrans les affichent dans la langue choisie via translateError().
@@ -205,17 +212,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // Phantom ne fait que SIGNER la transaction déjà prête ; c'est l'app qui l'envoie ensuite.
   // Si Phantom l'envoyait lui-même, il dépendrait de son propre accès réseau : quand il échoue,
   // Phantom reste bloqué sans revenir à l'app. L'app, elle, a ses nouvelles tentatives et son relais.
-  // `onSigned` : appelé dès le retour du wallet, pour que l'écran montre tout de suite l'envoi en cours.
-  const signAndSend = async (transaction: Transaction, onSigned?: () => void): Promise<string> => {
+  // `onProgress` : chaque étape réelle est signalée, pour que l'écran avance au rythme de la transaction.
+  const signAndSend = async (transaction: Transaction, onProgress?: (step: TxStep) => void): Promise<string> => {
+    onProgress?.('signing');
     const signed = await transact(async (wallet: Web3MobileWallet) => {
       const address = await authorize(wallet);
       if (address !== publicKey) throw new Error('error.walletChanged');
       const [signedTransaction] = await wallet.signTransactions({ transactions: [transaction] });
       return signedTransaction;
     });
-    onSigned?.();
+    onProgress?.('sending');
     // Renvoyer une transaction déjà signée est sans risque : Solana la reconnaît (même signature)
     const signature = await connection.sendRawTransaction(signed.serialize(), { maxRetries: 5 });
+    onProgress?.('confirming');
     await waitForConfirmation(signature);
     return signature;
   };
@@ -240,7 +249,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   // volontaire à TipStreak. Tout part dans la même transaction : une signature, tout ou rien.
   const sendTip = async (recipientAddress: string, amountUsdc: number, options: TipOptions = {}): Promise<string> => {
     if (!publicKey) throw new Error('error.walletNotConnected');
-    const { message, boostSkr = 0, contributionUsdc = 0, onSigned } = options;
+    const { message, boostSkr = 0, contributionUsdc = 0, onProgress } = options;
     const recipient = new PublicKey(recipientAddress);
     const transfers: SplTransfer[] = [{ mint: DEVNET_USDC_MINT, decimals: USDC_DECIMALS, recipient, amount: amountUsdc }];
     if (boostSkr > 0) {
@@ -250,7 +259,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (contributionUsdc > 0) {
       transfers.push({ mint: DEVNET_USDC_MINT, decimals: USDC_DECIMALS, recipient: TREASURY, amount: contributionUsdc });
     }
-    return signAndSend(await buildTransaction(transfers, message), onSigned);
+    return signAndSend(await buildTransaction(transfers, message), onProgress);
   };
 
   // Signature d'un simple message (gratuit, aucune transaction) : prouve qu'on possède le wallet.

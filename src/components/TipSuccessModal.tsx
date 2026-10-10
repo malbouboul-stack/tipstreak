@@ -1,19 +1,28 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Modal, StyleSheet, Text, View } from 'react-native';
 import { colors, fonts, streakColors } from '../theme';
-import StreakMark from './StreakMark';
 import GradientButton from './GradientButton';
 import { useLanguage } from '../i18n/LanguageContext';
 import { playTipSuccess } from '../lib/feedback';
+import type { TxStep } from '../context/WalletContext';
 
-// sending   : retour du wallet, la transaction part sur Solana (barres qui ondulent)
-// confirmed : confirmée on-chain, le logo se remplit et la pièce tombe (son + vibration)
-// recorded  : enregistrée par TipStreak, le bouton OK s'active
-export type TipPhase = 'sending' | 'confirmed' | 'recorded';
+// Les 7 barres du logo se remplissent au rythme réel de la transaction ; la pièce dorée tombe
+// (son + vibration) quand Solana confirme. Puis le bouton OK s'active une fois le tip enregistré.
+export type TipPhase = 'preparing' | TxStep | 'confirmed' | 'recorded';
 
 const MARK_SIZE = 72;
-// Moment où la pièce du logo touche la dernière barre (7 barres décalées de 110 ms + 420 ms, puis la chute)
-const COIN_LANDS_MS = 6 * 110 + 420 + 260;
+const HEIGHTS = [0.34, 0.44, 0.54, 0.64, 0.75, 0.87, 1]; // mêmes proportions que StreakMark
+const COIN_FALL_MS = 650;
+const COIN_FIRST_IMPACT = 0.36; // Easing.bounce touche la barre la première fois vers 36 % de la chute
+
+// Barres remplies visées à chaque étape, et durée pour y arriver. Pendant la confirmation, la progression
+// avance lentement vers la 6e barre : l'écran n'est jamais figé, même si le réseau prend son temps.
+const TARGETS: Record<Exclude<TipPhase, 'confirmed' | 'recorded'>, { bars: number; ms: number }> = {
+  preparing: { bars: 1, ms: 350 },
+  signing: { bars: 2, ms: 400 },
+  sending: { bars: 4, ms: 500 },
+  confirming: { bars: 6.4, ms: 5000 },
+};
 
 type Props = {
   visible: boolean;
@@ -25,41 +34,62 @@ type Props = {
   onClose: () => void;
 };
 
-// Pendant l'envoi : les 7 barres du logo ondulent doucement, comme un égaliseur
-function PendingBars() {
-  const [waves] = useState(() => streakColors.map(() => new Animated.Value(0)));
+function ProgressMark({ phase }: { phase: TipPhase }) {
+  const [progress] = useState(() => new Animated.Value(0));
+  const [coin] = useState(() => new Animated.Value(0));
+  const confirmed = phase === 'confirmed' || phase === 'recorded';
+
   useEffect(() => {
-    const loops = waves.map((value, i) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(i * 90),
-          Animated.timing(value, { toValue: 1, duration: 420, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-          Animated.timing(value, { toValue: 0, duration: 420, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-          Animated.delay((6 - i) * 90),
-        ])
-      )
-    );
-    loops.forEach((loop) => loop.start());
-    return () => loops.forEach((loop) => loop.stop());
-  }, [waves]);
+    if (confirmed) return;
+    const { bars, ms } = TARGETS[phase as keyof typeof TARGETS];
+    const animation = Animated.timing(progress, { toValue: bars, duration: ms, easing: Easing.out(Easing.cubic), useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [phase, confirmed, progress]);
+
+  // Bouquet final : les dernières barres se remplissent, la pièce tombe, son et vibration à l'impact
+  useEffect(() => {
+    if (!confirmed) return;
+    Animated.sequence([
+      Animated.timing(progress, { toValue: HEIGHTS.length, duration: 320, easing: Easing.out(Easing.back(1.6)), useNativeDriver: true }),
+      Animated.timing(coin, { toValue: 1, duration: COIN_FALL_MS, easing: Easing.bounce, useNativeDriver: true }),
+    ]).start();
+    const timer = setTimeout(playTipSuccess, 320 + COIN_FALL_MS * COIN_FIRST_IMPACT);
+    return () => clearTimeout(timer);
+  }, [confirmed, progress, coin]);
 
   const barWidth = MARK_SIZE / 8;
+  const coinSize = barWidth * 1.25;
   return (
     <View style={{ height: MARK_SIZE, flexDirection: 'row', alignItems: 'flex-end', gap: barWidth * 0.45 }}>
-      {waves.map((value, i) => (
-        <Animated.View
-          key={i}
-          style={{
-            width: barWidth,
-            height: MARK_SIZE * 0.5,
-            borderRadius: barWidth / 2,
-            backgroundColor: streakColors[i],
-            transformOrigin: 'bottom',
-            opacity: value.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] }),
-            transform: [{ scaleY: value.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] }) }],
-          }}
-        />
+      {HEIGHTS.map((ratio, i) => (
+        <View key={i} style={{ width: barWidth, height: MARK_SIZE * ratio, justifyContent: 'flex-end' }}>
+          {/* Emplacement de la barre, visible avant qu'elle se remplisse */}
+          <View style={[StyleSheet.absoluteFill, { borderRadius: barWidth / 2, backgroundColor: colors.surface2 }]} />
+          <Animated.View
+            style={{
+              height: '100%',
+              borderRadius: barWidth / 2,
+              backgroundColor: streakColors[i],
+              transformOrigin: 'bottom',
+              transform: [{ scaleY: progress.interpolate({ inputRange: [i, i + 1], outputRange: [0, 1], extrapolate: 'clamp' }) }],
+            }}
+          />
+        </View>
       ))}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          right: (barWidth - coinSize) / 2,
+          bottom: MARK_SIZE * 1.07,
+          width: coinSize,
+          height: coinSize,
+          borderRadius: coinSize / 2,
+          backgroundColor: colors.gold,
+          opacity: coin.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 1, 1] }),
+          transform: [{ translateY: coin.interpolate({ inputRange: [0, 1], outputRange: [-MARK_SIZE * 0.8, 0] }) }],
+        }}
+      />
     </View>
   );
 }
@@ -67,20 +97,24 @@ function PendingBars() {
 export default function TipSuccessModal({ visible, phase, amount, creatorName, boosted, contributed, onClose }: Props) {
   const { t } = useLanguage();
   const [appear] = useState(() => new Animated.Value(0));
-  const done = phase !== 'sending';
+  const done = phase === 'confirmed' || phase === 'recorded';
 
   useEffect(() => {
     if (!visible) return;
     appear.setValue(0);
-    Animated.timing(appear, { toValue: 1, duration: 320, easing: Easing.out(Easing.back(1.4)), useNativeDriver: true }).start();
+    Animated.timing(appear, { toValue: 1, duration: 280, easing: Easing.out(Easing.back(1.4)), useNativeDriver: true }).start();
   }, [visible, appear]);
 
-  // Son et vibration au moment où la pièce touche la dernière barre
-  useEffect(() => {
-    if (!visible || !done) return;
-    const timer = setTimeout(playTipSuccess, COIN_LANDS_MS);
-    return () => clearTimeout(timer);
-  }, [visible, done]);
+  const status =
+    phase === 'preparing'
+      ? t('tip.phasePreparing')
+      : phase === 'signing'
+        ? t('tip.phaseWallet')
+        : phase === 'sending'
+          ? t('tip.phaseSending')
+          : phase === 'confirming'
+            ? t('tip.phaseNetwork')
+            : t('tip.phaseSaving');
 
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={() => phase === 'recorded' && onClose()}>
@@ -92,8 +126,9 @@ export default function TipSuccessModal({ visible, phase, amount, creatorName, b
           ]}
         >
           <View style={styles.glow} />
-          <View style={styles.mark}>{done ? <StreakMark size={MARK_SIZE} animate /> : <PendingBars />}</View>
-          <Text style={styles.title}>{done ? t('tip.successTitle') : t('tip.phaseSending')}</Text>
+          {/* Monté à chaque ouverture : la progression repart de zéro pour chaque tip */}
+          <View style={styles.mark}>{visible && <ProgressMark phase={phase} />}</View>
+          <Text style={styles.title}>{done ? t('tip.successTitle') : t('tip.phaseTitle')}</Text>
           <Text style={styles.amount}>
             {amount} <Text style={styles.currency}>USDC</Text>
           </Text>
@@ -109,7 +144,7 @@ export default function TipSuccessModal({ visible, phase, amount, creatorName, b
           ) : (
             <View style={styles.waiting}>
               <ActivityIndicator size="small" color={colors.textDim} />
-              <Text style={styles.waitingText}>{done ? t('tip.phaseSaving') : t('tip.phaseNetwork')}</Text>
+              <Text style={styles.waitingText}>{status}</Text>
             </View>
           )}
         </Animated.View>

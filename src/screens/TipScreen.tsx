@@ -182,14 +182,15 @@ export default function TipScreen() {
             disabled={!finalAmount || sending || notEnoughUsdc || noSol}
             onPress={async () => {
               setSending(true);
+              // La carte s'ouvre dès l'appui : son logo se remplit au rythme réel de la transaction
+              setSuccess({ amount: finalAmount, boosted, contributed: contribution > 0, phase: 'preparing' });
               try {
-                // Tip, boost et contribution éventuels partent dans une seule transaction (une seule signature).
-                // Dès le retour du wallet, la carte de confirmation s'ouvre en "envoi en cours".
+                // Tip, boost et contribution éventuels partent dans une seule transaction (une seule signature)
                 const tipSignature = await sendTip(creator.walletAddress, finalAmount, {
                   message,
                   boostSkr: boosted ? BOOST_COST_SKR : 0,
                   contributionUsdc: contribution,
-                  onSigned: () => setSuccess({ amount: finalAmount, boosted, contributed: contribution > 0, phase: 'sending' }),
+                  onProgress: (step) => setSuccess((s) => s && { ...s, phase: step }),
                 });
                 console.log('Tip signature:', tipSignature);
                 // Confirmé on-chain : la pièce tombe (son + vibration), l'argent est arrivé chez le créateur
