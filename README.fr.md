@@ -113,6 +113,10 @@ supabase/
 > L'app suit la langue du téléphone (français, anglais, espagnol ou portugais) ; le bouton **🌐 FR ▾** en haut de Découvrir et de Profil
 > permet de changer à tout moment.
 
+> **Wallets :** testé avec **Phantom** et **Solflare** (tout wallet Mobile Wallet Adapter fonctionne, dont le Seed Vault du Seeker).
+> Sur un téléphone qui manque de mémoire, Android peut fermer TipStreak pendant le démarrage du wallet : ouvrir
+> le wallet une fois avant d'envoyer un tip, ou réessayer (rien n'est débité dans ce cas).
+
 ## Développement
 
 ### Démarrage rapide (backend de démo public)

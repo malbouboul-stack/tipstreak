@@ -365,15 +365,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (contributionUsdc > 0) {
       transfers.push({ mint: DEVNET_USDC_MINT, decimals: USDC_DECIMALS, recipient: TREASURY, amount: contributionUsdc });
     }
-    try {
-      return await signAndSend(await buildTransaction(transfers, message), onProgress);
-    } catch (e: any) {
-      // Expirée sans avoir été exécutée (vérifié dans sendAndConfirm) : on la refait une fois avec un
-      // blockhash neuf, le wallet redemande simplement une validation. Aucun risque de payer deux fois.
-      if (e?.message !== 'error.txExpired') throw e;
-      onProgress?.('preparing');
-      return signAndSend(await buildTransaction(transfers, message), onProgress);
-    }
+    // Une seule tentative : si elle expire, un message clair invite à réessayer (rien n'est débité)
+    return signAndSend(await buildTransaction(transfers, message), onProgress);
   };
 
   // Signature d'un simple message (gratuit, aucune transaction) : prouve qu'on possède le wallet.
