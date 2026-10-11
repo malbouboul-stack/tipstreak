@@ -103,7 +103,7 @@ supabase/
 
 1. Install the **TipStreak (preview)** APK on an Android phone:
    [direct APK download](https://expo.dev/artifacts/eas/4F4o-JjzjsYsucN2bH8q3RfsoeBQnveFsAE7dsRRMFE.apk).
-2. Install **Phantom** and turn on **Testnet mode** (Settings → Developer settings), network **Solana Devnet**.
+2. Install **Solflare** (recommended) and switch the network to **Devnet** (Settings → Network), or **Phantom** with **Testnet mode** on (Settings → Developer settings), network **Solana Devnet**.
 3. Get devnet SOL ([faucet.solana.com](https://faucet.solana.com)) and devnet USDC ([faucet.circle.com](https://faucet.circle.com), *Solana Devnet*).
 4. **Profile** tab → connect your wallet. **Discover** tab → pick a creator → **Send a tip** → sign in Phantom.
 5. To receive tips: **Profile** → *Receive tips* → choose a handle → **Publish my page** → sign (free).
@@ -111,7 +111,7 @@ supabase/
 > The app follows the phone's language (English, French, Spanish or Portuguese); switch it anytime with the **🌐 FR ▾** button
 > at the top of Discover and Profile.
 
-> **Wallets:** tested with **Phantom** and **Solflare** (any Mobile Wallet Adapter wallet works, including the Seeker's Seed Vault).
+> **Wallets:** tested with **Solflare** (recommended for devnet testing) and **Phantom** (any Mobile Wallet Adapter wallet works, including the Seeker's Seed Vault).
 > On a phone short on memory, Android may close TipStreak while the wallet cold-starts: open the wallet once
 > before tipping, or retry (nothing is charged when this happens).
 
