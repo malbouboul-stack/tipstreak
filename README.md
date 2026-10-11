@@ -188,6 +188,10 @@ To enable boosts, set the `TSKR_MINT` secret on the `record-tip` Edge Function.
 | Tested by real users on their own Android phones and wallets | ✅ 3 testers |
 | Hackathon security audit answered ([SECURITY.md](SECURITY.md)) | ✅ |
 
+**Real usage on devnet** (beta testers on their own Android phones): 24 verified tips, 33 USDC, 4 fan wallets,
+5 real creator pages, 5 SKR-boosted tips, 6 contributions. On-chain proof:
+[tip + SKR boost + contribution in one transaction](https://explorer.solana.com/tx/2bvkn3z3yVZDtwbCbtyv57KsiTiVQxSC4nRhY4XJ8Yo6Hiekoyiw7sYhPceJvW4F6Vx5576UgyGEfKcVRD2kj5ep?cluster=devnet) · [tip via Solflare with contribution](https://explorer.solana.com/tx/5Z8sd4rtQLbcTvf7RtCq412riGzgdeber2JqErRb5p3g3XyFWujhSVnSinh4fxT39wfhS5SaAT5VNr6Gq6Nz8ycw?cluster=devnet).
+
 ## Business model
 
 Creators always receive **100% of their tips and boosts**. TipStreak earns from optional services:

@@ -191,6 +191,10 @@ Pour activer les boosts, définir le secret `TSKR_MINT` de l'Edge Function `reco
 | Testé par de vrais utilisateurs, sur leurs propres téléphones et wallets | ✅ 3 testeurs |
 | Audit de sécurité du hackathon traité ([SECURITY.md](SECURITY.md)) | ✅ |
 
+**Utilisation réelle sur devnet** (testeurs sur leurs propres téléphones Android) : 24 tips vérifiés, 33 USDC, 4 wallets de fans,
+5 vraies pages créateurs, 5 tips boostés en SKR, 6 contributions. Preuves on-chain :
+[tip + boost SKR + contribution en une seule transaction](https://explorer.solana.com/tx/2bvkn3z3yVZDtwbCbtyv57KsiTiVQxSC4nRhY4XJ8Yo6Hiekoyiw7sYhPceJvW4F6Vx5576UgyGEfKcVRD2kj5ep?cluster=devnet) · [tip via Solflare avec contribution](https://explorer.solana.com/tx/5Z8sd4rtQLbcTvf7RtCq412riGzgdeber2JqErRb5p3g3XyFWujhSVnSinh4fxT39wfhS5SaAT5VNr6Gq6Nz8ycw?cluster=devnet).
+
 ## Modèle économique
 
 Les créateurs reçoivent toujours **100 % de leurs tips et boosts**. TipStreak gagne sa vie avec des services facultatifs :
