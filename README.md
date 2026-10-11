@@ -205,9 +205,9 @@ Creators always receive **100% of their tips and boosts**. TipStreak earns from 
 - **Verified creators** (linked X / YouTube account) before appearing in Discover.
 - **Sponsored network fees**: TipStreak pays the fan's transaction fees, so a tip only needs USDC.
 - **Pay with any token** (Jupiter swap) and **sponsored tips** (see business model).
-- **Pay by card, cash out to a bank**: an on-ramp partner (Stripe, MoonPay, Coinbase Onramp…) lets fans without a crypto
-  wallet tip by card or Apple / Google Pay while the creator still receives USDC, and creators can withdraw to their bank.
-  The partner handles KYC and licensing; this opens TipStreak to the 95%+ of fans who don't hold crypto yet.
+- **Later, being explored (crypto-first, no promise):** an optional fiat on-ramp through a partner (Stripe, MoonPay,
+  Coinbase Onramp…) so fans without a wallet could tip by card while the creator still receives USDC on-chain.
+  TipStreak stays crypto-native; this would only widen the audience once the crypto product is proven.
 - Tip notifications for creators, creator-defined perks for each tier, `https://` creator links (App Links), stream overlay.
 
 ## License
