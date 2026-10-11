@@ -24,6 +24,12 @@ The server-side key (`SUPABASE_SECRET_KEYS`) exists only inside the Edge Functio
 Local keypairs used for devnet tooling (`.skr-mint-authority.json`, `.demo-creator-wallets.json`) and `.env.local`
 are git-ignored.
 
+The same publishable key also appears in `eas.json` (build profile) and `.env` (public demo backend), which the audit
+flagged as a "generic API key": it is that same public, read-only key, not a credential.
+
+**`@solana/web3.js` v1 (low):** still the version the Solana Mobile Wallet Adapter SDK is built on. Moving to
+`@solana/kit` is planned together with the mainnet release (it also removes `bigint-buffer`, see below).
+
 **Transitive dependencies:**
 
 | Package | Pulled in by | Status |
