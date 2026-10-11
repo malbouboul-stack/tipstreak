@@ -107,8 +107,10 @@ supabase/
    [téléchargement direct de l'APK](https://expo.dev/artifacts/eas/4F4o-JjzjsYsucN2bH8q3RfsoeBQnveFsAE7dsRRMFE.apk).
 2. Installer **Solflare** (recommandé) et passer le réseau sur **Devnet** (Paramètres → Réseau), ou **Phantom** avec le **mode Testnet** activé (Paramètres → Paramètres pour développeurs), réseau **Solana Devnet**.
 3. Obtenir du SOL devnet ([faucet.solana.com](https://faucet.solana.com)) et de l'USDC devnet ([faucet.circle.com](https://faucet.circle.com), *Solana Devnet*).
-4. Onglet **Profil** → connecter le wallet. Onglet **Découvrir** → choisir un créateur → **Envoyer un tip** → signer dans Phantom.
+4. Onglet **Profil** → connecter le wallet. Onglet **Découvrir** → choisir un créateur → **Envoyer un tip** → valider dans le wallet.
 5. Pour recevoir : **Profil** → *Recevoir des tips* → choisir un handle → **Publier ma page** → signer (gratuit).
+6. Facultatif, **boost SKR** : il faut le jeton de test devnet TSKR (SKR n'existe que sur mainnet). Ouvrir une issue
+   GitHub avec l'adresse de son wallet devnet pour en recevoir ; le tip lui-même fonctionne sans.
 
 > L'app suit la langue du téléphone (français, anglais, espagnol ou portugais) ; le bouton **🌐 FR ▾** en haut de Découvrir et de Profil
 > permet de changer à tout moment.
