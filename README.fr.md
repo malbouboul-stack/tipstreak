@@ -11,7 +11,7 @@ et reçoivent les tips directement dessus.
 
 > Projet réalisé pour le hackathon Solana Mobile. Tourne sur **Solana devnet**.
 >
-> 📲 **Télécharger l'APK Android :** [TipStreak (preview)](https://expo.dev/artifacts/eas/4F4o-JjzjsYsucN2bH8q3RfsoeBQnveFsAE7dsRRMFE.apk) · 🎬 [Vidéo de démo](https://www.youtube.com/watch?v=76yhvYfAuUM)
+> 📲 **Télécharger l'APK Android :** [TipStreak (preview)](https://expo.dev/artifacts/eas/4F4o-JjzjsYsucN2bH8q3RfsoeBQnveFsAE7dsRRMFE.apk) · 🎬 [Vidéo de démo](https://www.youtube.com/watch?v=4VCRxVm8jsw)
 > · ⛓️ Premier vrai tip, vérifié on-chain : [voir sur Solana Explorer](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet)
 
 ## Fonctionnalités

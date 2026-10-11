@@ -10,7 +10,7 @@ weekly badges. Creators publish their page by signing with their wallet and rece
 
 > Built for the Solana Mobile hackathon. Runs on **Solana devnet**.
 >
-> 📲 **Download the Android APK:** [TipStreak (preview)](https://expo.dev/artifacts/eas/4F4o-JjzjsYsucN2bH8q3RfsoeBQnveFsAE7dsRRMFE.apk) · 🎬 [Demo video](https://www.youtube.com/watch?v=76yhvYfAuUM)
+> 📲 **Download the Android APK:** [TipStreak (preview)](https://expo.dev/artifacts/eas/4F4o-JjzjsYsucN2bH8q3RfsoeBQnveFsAE7dsRRMFE.apk) · 🎬 [Demo video](https://www.youtube.com/watch?v=4VCRxVm8jsw)
 > · ⛓️ First real tip, verified on-chain: [view on Solana Explorer](https://explorer.solana.com/tx/5PHxeGeQkVXohGEkySTtjCRsXq6RRUhnrStzms84zb3FUFJ6jwwvuTTWa1Q43kthasJejcqKVa71djhPaiAp179F?cluster=devnet)
 
 ## Features
